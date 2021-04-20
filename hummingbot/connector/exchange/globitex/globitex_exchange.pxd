@@ -3,7 +3,7 @@ from hummingbot.connector.exchange_base cimport ExchangeBase
 from hummingbot.core.data_type.transaction_tracker cimport TransactionTracker
 
 
-cdef class BinanceExchange(ExchangeBase):
+cdef class GlobitexExchange(ExchangeBase):
     cdef:
         object _user_stream_tracker
         object _binance_client

@@ -83,7 +83,7 @@ cdef str get_client_order_id(str order_side, object trading_pair):
     return f"{BROKER_ID}-{order_side.upper()[0]}{base[0]}{base[-1]}{quote[0]}{quote[-1]}{nonce}"
 
 
-cdef class BinanceExchangeTransactionTracker(TransactionTracker):
+cdef class GlobitexExchangeTransactionTracker(TransactionTracker):
     cdef:
         BinanceExchange _owner
 

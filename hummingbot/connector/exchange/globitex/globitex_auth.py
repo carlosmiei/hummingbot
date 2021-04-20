@@ -7,7 +7,7 @@ from typing import Dict, Any
 
 class GlobitexAuth():
     """
-    Auth class required by HitBTC API
+    Auth class required by Globitex API
     Learn more at https://https://globitex.com/api/
     """
     def __init__(self, api_key: str, secret_key: str):

@@ -13,7 +13,7 @@ from hummingbot.connector.in_flight_order_base import InFlightOrderBase
 s_decimal_0 = Decimal(0)
 
 
-cdef class BinanceInFlightOrder(InFlightOrderBase):
+cdef class GlobitexInFlightOrder(InFlightOrderBase):
     def __init__(self,
                  client_order_id: str,
                  exchange_order_id: str,

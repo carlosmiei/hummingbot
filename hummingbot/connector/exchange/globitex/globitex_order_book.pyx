@@ -21,7 +21,7 @@ from . import binance_utils
 _bob_logger = None
 
 
-cdef class BinanceOrderBook(OrderBook):
+cdef class GlobitexOrderBook(OrderBook):
     @classmethod
     def logger(cls) -> HummingbotLogger:
         global _bob_logger
