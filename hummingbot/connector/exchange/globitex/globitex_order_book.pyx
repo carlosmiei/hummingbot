@@ -16,7 +16,7 @@ from hummingbot.core.data_type.order_book_message import (
     OrderBookMessage,
     OrderBookMessageType
 )
-from . import binance_utils
+from . import Globitex_utils
 
 _bob_logger = None
 
@@ -51,7 +51,7 @@ cdef class GlobitexOrderBook(OrderBook):
         if metadata:
             msg.update(metadata)
         return OrderBookMessage(OrderBookMessageType.DIFF, {
-            "trading_pair": binance_utils.convert_from_exchange_trading_pair(msg["s"]),
+            "trading_pair": Globitex_utils.convert_from_exchange_trading_pair(msg["s"]),
             "first_update_id": msg["U"],
             "update_id": msg["u"],
             "bids": msg["b"],
@@ -72,11 +72,11 @@ cdef class GlobitexOrderBook(OrderBook):
 
     @classmethod
     def diff_message_from_db(cls, record: RowProxy, metadata: Optional[Dict] = None) -> OrderBookMessage:
-        msg = ujson.loads(record["json"])  # Binance json in DB is TEXT
+        msg = ujson.loads(record["json"])  # Globitex json in DB is TEXT
         if metadata:
             msg.update(metadata)
         return OrderBookMessage(OrderBookMessageType.DIFF, {
-            "trading_pair": binance_utils.convert_from_exchange_trading_pair(msg["s"]),
+            "trading_pair": Globitex_utils.convert_from_exchange_trading_pair(msg["s"]),
             "first_update_id": msg["U"],
             "update_id": msg["u"],
             "bids": msg["b"],
@@ -101,7 +101,7 @@ cdef class GlobitexOrderBook(OrderBook):
         if metadata:
             msg.update(metadata)
         return OrderBookMessage(OrderBookMessageType.DIFF, {
-            "trading_pair": binance_utils.convert_from_exchange_trading_pair(msg["s"]),
+            "trading_pair": Globitex_utils.convert_from_exchange_trading_pair(msg["s"]),
             "update_id": msg["u"],
             "bids": msg["b"],
             "asks": msg["a"],
@@ -115,7 +115,7 @@ cdef class GlobitexOrderBook(OrderBook):
             msg.update(metadata)
         ts = record.timestamp
         return OrderBookMessage(OrderBookMessageType.TRADE, {
-            "trading_pair": binance_utils.convert_from_exchange_trading_pair(msg["s"]),
+            "trading_pair": Globitex_utils.convert_from_exchange_trading_pair(msg["s"]),
             "trade_type": float(TradeType.SELL.value) if msg["m"] else float(TradeType.BUY.value),
             "trade_id": msg["t"],
             "update_id": ts,
@@ -129,7 +129,7 @@ cdef class GlobitexOrderBook(OrderBook):
             msg.update(metadata)
         ts = msg["E"]
         return OrderBookMessage(OrderBookMessageType.TRADE, {
-            "trading_pair": binance_utils.convert_from_exchange_trading_pair(msg["s"]),
+            "trading_pair": Globitex_utils.convert_from_exchange_trading_pair(msg["s"]),
             "trade_type": float(TradeType.SELL.value) if msg["m"] else float(TradeType.BUY.value),
             "trade_id": msg["t"],
             "update_id": ts,
@@ -139,6 +139,6 @@ cdef class GlobitexOrderBook(OrderBook):
 
     @classmethod
     def from_snapshot(cls, msg: OrderBookMessage) -> "OrderBook":
-        retval = BinanceOrderBook()
+        retval = GlobitexOrderBook()
         retval.apply_snapshot(msg.bids, msg.asks, msg.update_id)
         return retval

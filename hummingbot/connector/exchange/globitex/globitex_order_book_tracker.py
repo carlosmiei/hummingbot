@@ -13,12 +13,12 @@ from typing import (
 
 from hummingbot.logger import HummingbotLogger
 from hummingbot.core.data_type.order_book_tracker import OrderBookTracker
-from hummingbot.connector.exchange.binance.binance_api_order_book_data_source import BinanceAPIOrderBookDataSource
+from hummingbot.connector.exchange.Globitex.Globitex_api_order_book_data_source import GlobitexAPIOrderBookDataSource
 from hummingbot.core.data_type.order_book import OrderBook
 from hummingbot.core.data_type.order_book_message import OrderBookMessage, OrderBookMessageType
 
 
-class BinanceOrderBookTracker(OrderBookTracker):
+class GlobitexOrderBookTracker(OrderBookTracker):
     _bobt_logger: Optional[HummingbotLogger] = None
 
     @classmethod
@@ -31,7 +31,7 @@ class BinanceOrderBookTracker(OrderBookTracker):
                  trading_pairs: Optional[List[str]] = None,
                  domain: str = "com"):
         super().__init__(
-            data_source=BinanceAPIOrderBookDataSource(trading_pairs=trading_pairs, domain=domain),
+            data_source=GlobitexAPIOrderBookDataSource(trading_pairs=trading_pairs, domain=domain),
             trading_pairs=trading_pairs,
             domain=domain
         )
@@ -44,9 +44,9 @@ class BinanceOrderBookTracker(OrderBookTracker):
     @property
     def exchange_name(self) -> str:
         if self._domain == "com":
-            return "binance"
+            return "Globitex"
         else:
-            return f"binance_{self._domain}"
+            return f"Globitex_{self._domain}"
 
     async def _order_book_diff_router(self):
         """

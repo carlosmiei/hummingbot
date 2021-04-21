@@ -8,9 +8,9 @@ from aiokafka import (
 )
 import asyncio
 from async_timeout import timeout
-from binance.client import Client as BinanceClient
-from binance import client as binance_client_module
-from binance.exceptions import BinanceAPIException
+from Globitex.client import Client as GlobitexClient
+from Globitex import client as Globitex_client_module
+from Globitex.exceptions import GlobitexAPIException
 from decimal import Decimal
 from functools import partial
 import logging
@@ -35,7 +35,7 @@ from hummingbot.core.utils.async_utils import (
     safe_ensure_future,
     safe_gather,
 )
-from hummingbot.connector.exchange.binance.binance_api_order_book_data_source import BinanceAPIOrderBookDataSource
+from hummingbot.connector.exchange.Globitex.Globitex_api_order_book_data_source import GlobitexAPIOrderBookDataSource
 from hummingbot.logger import HummingbotLogger
 from hummingbot.core.event.events import (
     MarketEvent,
@@ -59,11 +59,11 @@ from hummingbot.core.data_type.transaction_tracker import TransactionTracker
 from hummingbot.connector.trading_rule cimport TradingRule
 from hummingbot.core.utils.tracking_nonce import get_tracking_nonce
 from hummingbot.core.utils.estimate_fee import estimate_fee
-from .binance_order_book_tracker import BinanceOrderBookTracker
-from .binance_user_stream_tracker import BinanceUserStreamTracker
-from .binance_time import BinanceTime
-from .binance_in_flight_order import BinanceInFlightOrder
-from .binance_utils import (
+from .Globitex_order_book_tracker import GlobitexOrderBookTracker
+from .Globitex_user_stream_tracker import GlobitexUserStreamTracker
+from .Globitex_time import GlobitexTime
+from .Globitex_in_flight_order import GlobitexInFlightOrder
+from .Globitex_utils import (
     convert_from_exchange_trading_pair,
     convert_to_exchange_trading_pair)
 from hummingbot.core.data_type.common import OpenOrder
@@ -85,9 +85,9 @@ cdef str get_client_order_id(str order_side, object trading_pair):
 
 cdef class GlobitexExchangeTransactionTracker(TransactionTracker):
     cdef:
-        BinanceExchange _owner
+        GlobitexExchange _owner
 
-    def __init__(self, owner: BinanceExchange):
+    def __init__(self, owner: GlobitexExchange):
         super().__init__()
         self._owner = owner
 
@@ -96,7 +96,7 @@ cdef class GlobitexExchangeTransactionTracker(TransactionTracker):
         self._owner.c_did_timeout_tx(tx_id)
 
 
-cdef class BinanceExchange(ExchangeBase):
+cdef class GlobitexExchange(ExchangeBase):
     MARKET_RECEIVED_ASSET_EVENT_TAG = MarketEvent.ReceivedAsset.value
     MARKET_BUY_ORDER_COMPLETED_EVENT_TAG = MarketEvent.BuyOrderCompleted.value
     MARKET_SELL_ORDER_COMPLETED_EVENT_TAG = MarketEvent.SellOrderCompleted.value
@@ -111,8 +111,8 @@ cdef class BinanceExchange(ExchangeBase):
     SHORT_POLL_INTERVAL = 5.0
     UPDATE_ORDER_STATUS_MIN_INTERVAL = 10.0
     LONG_POLL_INTERVAL = 120.0
-    BINANCE_TRADE_TOPIC_NAME = "binance-trade.serialized"
-    BINANCE_USER_STREAM_TOPIC_NAME = "binance-user-stream.serialized"
+    Globitex_TRADE_TOPIC_NAME = "Globitex-trade.serialized"
+    Globitex_USER_STREAM_TOPIC_NAME = "Globitex-user-stream.serialized"
 
     ORDER_NOT_EXIST_CONFIRMATION_COUNT = 3
 
@@ -124,25 +124,25 @@ cdef class BinanceExchange(ExchangeBase):
         return s_logger
 
     def __init__(self,
-                 binance_api_key: str,
-                 binance_api_secret: str,
+                 Globitex_api_key: str,
+                 Globitex_api_secret: str,
                  trading_pairs: Optional[List[str]] = None,
                  trading_required: bool = True,
                  domain="com"
                  ):
         self._domain = domain
-        self.monkey_patch_binance_time()
+        self.monkey_patch_Globitex_time()
         super().__init__()
         self._trading_required = trading_required
-        self._order_book_tracker = BinanceOrderBookTracker(trading_pairs=trading_pairs, domain=domain)
-        self._binance_client = BinanceClient(binance_api_key, binance_api_secret, tld=domain)
-        self._user_stream_tracker = BinanceUserStreamTracker(binance_client=self._binance_client, domain=domain)
+        self._order_book_tracker = GlobitexOrderBookTracker(trading_pairs=trading_pairs, domain=domain)
+        self._Globitex_client = GlobitexClient(Globitex_api_key, Globitex_api_secret, tld=domain)
+        self._user_stream_tracker = GlobitexUserStreamTracker(Globitex_client=self._Globitex_client, domain=domain)
         self._ev_loop = asyncio.get_event_loop()
         self._poll_notifier = asyncio.Event()
         self._last_timestamp = 0
-        self._in_flight_orders = {}  # Dict[client_order_id:str, BinanceInFlightOrder]
+        self._in_flight_orders = {}  # Dict[client_order_id:str, GlobitexInFlightOrder]
         self._order_not_found_records = {}  # Dict[client_order_id:str, count:int]
-        self._tx_tracker = BinanceExchangeTransactionTracker(self)
+        self._tx_tracker = GlobitexExchangeTransactionTracker(self)
         self._trading_rules = {}  # Dict[trading_pair:str, TradingRule]
         self._trade_fees = {}  # Dict[trading_pair:str, (maker_fee_percent:Decimal, taken_fee_percent:Decimal)]
         self._last_update_trade_fees_timestamp = 0
@@ -156,24 +156,24 @@ cdef class BinanceExchange(ExchangeBase):
     @property
     def name(self) -> str:
         if self._domain == "com":
-            return "binance"
+            return "Globitex"
         else:
-            return f"binance_{self._domain}"
+            return f"Globitex_{self._domain}"
 
     @property
     def order_books(self) -> Dict[str, OrderBook]:
         return self._order_book_tracker.order_books
 
     @property
-    def binance_client(self) -> BinanceClient:
-        return self._binance_client
+    def Globitex_client(self) -> GlobitexClient:
+        return self._Globitex_client
 
     @property
     def trading_rules(self) -> Dict[str, TradingRule]:
         return self._trading_rules
 
     @property
-    def in_flight_orders(self) -> Dict[str, BinanceInFlightOrder]:
+    def in_flight_orders(self) -> Dict[str, GlobitexInFlightOrder]:
         return self._in_flight_orders
 
     @property
@@ -191,39 +191,39 @@ cdef class BinanceExchange(ExchangeBase):
         }
 
     @property
-    def order_book_tracker(self) -> BinanceOrderBookTracker:
+    def order_book_tracker(self) -> GlobitexOrderBookTracker:
         return self._order_book_tracker
 
     @property
-    def user_stream_tracker(self) -> BinanceUserStreamTracker:
+    def user_stream_tracker(self) -> GlobitexUserStreamTracker:
         return self._user_stream_tracker
 
     def restore_tracking_states(self, saved_states: Dict[str, any]):
         self._in_flight_orders.update({
-            key: BinanceInFlightOrder.from_json(value)
+            key: GlobitexInFlightOrder.from_json(value)
             for key, value in saved_states.items()
         })
 
     async def get_active_exchange_markets(self) -> pd.DataFrame:
-        return await BinanceAPIOrderBookDataSource.get_active_exchange_markets()
+        return await GlobitexAPIOrderBookDataSource.get_active_exchange_markets()
 
-    def monkey_patch_binance_time(self):
-        if binance_client_module.time != BinanceTime.get_instance():
-            binance_client_module.time = BinanceTime.get_instance()
-            BinanceTime.get_instance().start()
+    def monkey_patch_Globitex_time(self):
+        if Globitex_client_module.time != GlobitexTime.get_instance():
+            Globitex_client_module.time = GlobitexTime.get_instance()
+            GlobitexTime.get_instance().start()
 
     async def schedule_async_call(
             self,
             coro: Coroutine,
             timeout_seconds: float,
-            app_warning_msg: str = "Binance API call failed. Check API key and network connection.") -> any:
+            app_warning_msg: str = "Globitex API call failed. Check API key and network connection.") -> any:
         return await self._async_scheduler.schedule_async_call(coro, timeout_seconds, app_warning_msg=app_warning_msg)
 
     async def query_api(
             self,
             func,
             *args,
-            app_warning_msg: str = "Binance API call failed. Check API key and network connection.",
+            app_warning_msg: str = "Globitex API call failed. Check API key and network connection.",
             request_weight: int = 1,
             **kwargs) -> Dict[str, any]:
         async with self._throttler.weighted_task(request_weight=request_weight):
@@ -233,11 +233,11 @@ cdef class BinanceExchange(ExchangeBase):
                                                               app_warning_msg=app_warning_msg)
             except Exception as ex:
                 if "Timestamp for this request" in str(ex):
-                    self.logger().warning("Got Binance timestamp error. "
-                                          "Going to force update Binance server time offset...")
-                    binance_time = BinanceTime.get_instance()
-                    binance_time.clear_time_offset_ms_samples()
-                    await binance_time.schedule_update_server_time_offset()
+                    self.logger().warning("Got Globitex timestamp error. "
+                                          "Going to force update Globitex server time offset...")
+                    Globitex_time = GlobitexTime.get_instance()
+                    Globitex_time.clear_time_offset_ms_samples()
+                    await Globitex_time.schedule_update_server_time_offset()
                 raise ex
 
     async def query_url(self, url, request_weight: int = 1) -> any:
@@ -258,7 +258,7 @@ cdef class BinanceExchange(ExchangeBase):
             set remote_asset_names = set()
             set asset_names_to_remove
 
-        account_info = await self.query_api(self._binance_client.get_account)
+        account_info = await self.query_api(self._Globitex_client.get_account)
         balances = account_info["balances"]
         for balance_entry in balances:
             asset_name = balance_entry["asset"]
@@ -279,15 +279,15 @@ cdef class BinanceExchange(ExchangeBase):
 
         if current_timestamp - self._last_update_trade_fees_timestamp > 60.0 * 60.0 or len(self._trade_fees) < 1:
             try:
-                res = await self.query_api(self._binance_client.get_trade_fee)
+                res = await self.query_api(self._Globitex_client.get_trade_fee)
                 for fee in res["tradeFee"]:
                     self._trade_fees[fee["symbol"]] = (Decimal(fee["maker"]), Decimal(fee["taker"]))
                 self._last_update_trade_fees_timestamp = current_timestamp
             except asyncio.CancelledError:
                 raise
             except Exception:
-                self.logger().network("Error fetching Binance trade fees.", exc_info=True,
-                                      app_warning_msg=f"Could not fetch Binance trading fees. "
+                self.logger().network("Error fetching Globitex trade fees.", exc_info=True,
+                                      app_warning_msg=f"Could not fetch Globitex trading fees. "
                                                       f"Check network connection.")
                 raise
 
@@ -304,13 +304,13 @@ cdef class BinanceExchange(ExchangeBase):
             object taker_trade_fee = Decimal("0.001")
             str trading_pair = base_currency + quote_currency
 
-        if order_type.is_limit_type() and fee_overrides_config_map["binance_maker_fee"].value is not None:
-            return TradeFee(percent=fee_overrides_config_map["binance_maker_fee"].value / Decimal("100"))
-        if order_type is OrderType.MARKET and fee_overrides_config_map["binance_taker_fee"].value is not None:
-            return TradeFee(percent=fee_overrides_config_map["binance_taker_fee"].value / Decimal("100"))
+        if order_type.is_limit_type() and fee_overrides_config_map["Globitex_maker_fee"].value is not None:
+            return TradeFee(percent=fee_overrides_config_map["Globitex_maker_fee"].value / Decimal("100"))
+        if order_type is OrderType.MARKET and fee_overrides_config_map["Globitex_taker_fee"].value is not None:
+            return TradeFee(percent=fee_overrides_config_map["Globitex_taker_fee"].value / Decimal("100"))
 
         if trading_pair not in self._trade_fees:
-            # https://www.binance.com/en/fee/schedule
+            # https://www.Globitex.com/en/fee/schedule
             self.logger().warning(f"Unable to find trade fee for {trading_pair}. Using default 0.1% maker/taker fee.")
         else:
             maker_trade_fee, taker_trade_fee = self._trade_fees.get(trading_pair)
@@ -324,7 +324,7 @@ cdef class BinanceExchange(ExchangeBase):
             int64_t last_tick = <int64_t>(self._last_timestamp / 60.0)
             int64_t current_tick = <int64_t>(self._current_timestamp / 60.0)
         if current_tick > last_tick or len(self._trading_rules) < 1:
-            exchange_info = await self.query_api(self._binance_client.get_exchange_info)
+            exchange_info = await self.query_api(self._Globitex_client.get_exchange_info)
             trading_rules_list = self._format_trading_rules(exchange_info)
             self._trading_rules.clear()
             for trading_rule in trading_rules_list:
@@ -386,9 +386,9 @@ cdef class BinanceExchange(ExchangeBase):
     async def _update_order_fills_from_trades(self):
         cdef:
             # This is intended to be a backup measure to get filled events with trade ID for orders,
-            # in case Binance's user stream events are not working.
+            # in case Globitex's user stream events are not working.
             # This is separated from _update_order_status which only updates the order status without producing filled
-            # events, since Binance's get order endpoint does not return trade IDs.
+            # events, since Globitex's get order endpoint does not return trade IDs.
             # The minimum poll interval for order status is 10 seconds.
             int64_t last_tick = <int64_t>(self._last_poll_timestamp / self.UPDATE_ORDER_STATUS_MIN_INTERVAL)
             int64_t current_tick = <int64_t>(self._current_timestamp / self.UPDATE_ORDER_STATUS_MIN_INTERVAL)
@@ -400,7 +400,7 @@ cdef class BinanceExchange(ExchangeBase):
                     trading_pairs_to_order_map[o.trading_pair][o.exchange_order_id] = o
 
                 trading_pairs = list(trading_pairs_to_order_map.keys())
-                tasks = [self.query_api(self._binance_client.get_my_trades, symbol=convert_to_exchange_trading_pair(trading_pair))
+                tasks = [self.query_api(self._Globitex_client.get_my_trades, symbol=convert_to_exchange_trading_pair(trading_pair))
                          for trading_pair in trading_pairs]
                 self.logger().debug(f"Polling for order fills of {len(tasks)} trading pairs.")
                 results = await safe_gather(*tasks, return_exceptions=True)
@@ -446,7 +446,7 @@ cdef class BinanceExchange(ExchangeBase):
 
         if current_tick > last_tick:
             trading_pairs = self._order_book_tracker._trading_pairs
-            tasks = [self.query_api(self._binance_client.get_my_trades, symbol=convert_to_exchange_trading_pair(trading_pair))
+            tasks = [self.query_api(self._Globitex_client.get_my_trades, symbol=convert_to_exchange_trading_pair(trading_pair))
                      for trading_pair in trading_pairs]
             self.logger().debug(f"Polling for order fills of {len(tasks)} trading pairs.")
             exchange_history = await safe_gather(*tasks, return_exceptions=True)
@@ -483,7 +483,7 @@ cdef class BinanceExchange(ExchangeBase):
 
     async def _update_order_status(self):
         cdef:
-            # This is intended to be a backup measure to close straggler orders, in case Binance's user stream events
+            # This is intended to be a backup measure to close straggler orders, in case Globitex's user stream events
             # are not working.
             # The minimum poll interval for order status is 10 seconds.
             int64_t last_tick = <int64_t>(self._last_poll_timestamp / self.UPDATE_ORDER_STATUS_MIN_INTERVAL)
@@ -491,7 +491,7 @@ cdef class BinanceExchange(ExchangeBase):
 
         if current_tick > last_tick and len(self._in_flight_orders) > 0:
             tracked_orders = list(self._in_flight_orders.values())
-            tasks = [self.query_api(self._binance_client.get_order,
+            tasks = [self.query_api(self._Globitex_client.get_order,
                                     symbol=convert_to_exchange_trading_pair(o.trading_pair), origClientOrderId=o.client_order_id)
                      for o in tracked_orders]
             self.logger().debug(f"Polling for order status updates of {len(tasks)} orders.")
@@ -525,7 +525,7 @@ cdef class BinanceExchange(ExchangeBase):
 
                 # Update order execution status
                 tracked_order.last_state = order_update["status"]
-                order_type = BinanceExchange.to_hb_order_type(order_update["type"])
+                order_type = GlobitexExchange.to_hb_order_type(order_update["type"])
                 executed_amount_base = Decimal(order_update["executedQty"])
                 executed_amount_quote = Decimal(order_update["cummulativeQuoteQty"])
 
@@ -612,7 +612,7 @@ cdef class BinanceExchange(ExchangeBase):
                 self.logger().network(
                     "Unknown error. Retrying after 1 seconds.",
                     exc_info=True,
-                    app_warning_msg="Could not fetch user events from Binance. Check API key and network connection."
+                    app_warning_msg="Could not fetch user events from Globitex. Check API key and network connection."
                 )
                 await asyncio.sleep(1.0)
 
@@ -620,8 +620,8 @@ cdef class BinanceExchange(ExchangeBase):
         async for event_message in self._iter_user_event_queue():
             try:
                 event_type = event_message.get("e")
-                # Refer to https://github.com/binance-exchange/binance-official-api-docs/blob/master/user-data-stream.md
-                # As per the order update section in Binance the ID of the order being cancelled is under the "C" key
+                # Refer to https://github.com/Globitex-exchange/Globitex-official-api-docs/blob/master/user-data-stream.md
+                # As per the order update section in Globitex the ID of the order being cancelled is under the "C" key
                 if event_type == "executionReport":
                     execution_type = event_message.get("x")
                     if execution_type != "CANCELED":
@@ -640,7 +640,7 @@ cdef class BinanceExchange(ExchangeBase):
                     unique_update = tracked_order.update_with_execution_report(event_message)
 
                     if execution_type == "TRADE":
-                        order_filled_event = OrderFilledEvent.order_filled_event_from_binance_execution_report(event_message)
+                        order_filled_event = OrderFilledEvent.order_filled_event_from_Globitex_execution_report(event_message)
                         order_filled_event = order_filled_event._replace(trading_pair=convert_from_exchange_trading_pair(order_filled_event.trading_pair))
                         if unique_update:
                             self.c_trigger_event(self.MARKET_ORDER_FILLED_EVENT_TAG, order_filled_event)
@@ -728,7 +728,7 @@ cdef class BinanceExchange(ExchangeBase):
                 raise
             except Exception:
                 self.logger().network("Unexpected error while fetching account updates.", exc_info=True,
-                                      app_warning_msg="Could not fetch account updates from Binance. "
+                                      app_warning_msg="Could not fetch account updates from Globitex. "
                                                       "Check API key and network connection.")
                 await asyncio.sleep(0.5)
 
@@ -743,7 +743,7 @@ cdef class BinanceExchange(ExchangeBase):
                 raise
             except Exception:
                 self.logger().network("Unexpected error while fetching trading rules.", exc_info=True,
-                                      app_warning_msg="Could not fetch new trading rules from Binance. "
+                                      app_warning_msg="Could not fetch new trading rules from Globitex. "
                                                       "Check network connection.")
                 await asyncio.sleep(0.5)
 
@@ -763,7 +763,7 @@ cdef class BinanceExchange(ExchangeBase):
         """
         :return: The current server time in milliseconds since UNIX epoch.
         """
-        result = await self.query_api(self._binance_client.get_server_time)
+        result = await self.query_api(self._Globitex_client.get_server_time)
         return result["serverTime"]
 
     cdef c_start(self, Clock clock, double timestamp):
@@ -800,7 +800,7 @@ cdef class BinanceExchange(ExchangeBase):
 
     async def check_network(self) -> NetworkStatus:
         try:
-            await self.query_api(self._binance_client.ping)
+            await self.query_api(self._Globitex_client.ping)
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -838,12 +838,12 @@ cdef class BinanceExchange(ExchangeBase):
         return order_id
 
     @staticmethod
-    def binance_order_type(order_type: OrderType) -> str:
+    def Globitex_order_type(order_type: OrderType) -> str:
         return order_type.name.upper()
 
     @staticmethod
-    def to_hb_order_type(binance_type: str) -> OrderType:
-        return OrderType[binance_type]
+    def to_hb_order_type(Globitex_type: str) -> OrderType:
+        return OrderType[Globitex_type]
 
     def supported_order_types(self):
         return [OrderType.LIMIT, OrderType.LIMIT_MAKER]
@@ -865,8 +865,8 @@ cdef class BinanceExchange(ExchangeBase):
         order_result = None
         amount_str = f"{amount:f}"
         price_str = f"{price:f}"
-        type_str = BinanceExchange.binance_order_type(order_type)
-        side_str = BinanceClient.SIDE_BUY if trade_type is TradeType.BUY else BinanceClient.SIDE_SELL
+        type_str = GlobitexExchange.Globitex_order_type(order_type)
+        side_str = GlobitexClient.SIDE_BUY if trade_type is TradeType.BUY else GlobitexClient.SIDE_SELL
         api_params = {"symbol": convert_to_exchange_trading_pair(trading_pair),
                       "side": side_str,
                       "quantity": amount_str,
@@ -874,7 +874,7 @@ cdef class BinanceExchange(ExchangeBase):
                       "newClientOrderId": order_id,
                       "price": price_str}
         if order_type == OrderType.LIMIT:
-            api_params["timeInForce"] = BinanceClient.TIME_IN_FORCE_GTC
+            api_params["timeInForce"] = GlobitexClient.TIME_IN_FORCE_GTC
         self.c_start_tracking_order(order_id,
                                     "",
                                     trading_pair,
@@ -884,7 +884,7 @@ cdef class BinanceExchange(ExchangeBase):
                                     order_type
                                     )
         try:
-            order_result = await self.query_api(self._binance_client.create_order, **api_params)
+            order_result = await self.query_api(self._Globitex_client.create_order, **api_params)
             exchange_order_id = str(order_result["orderId"])
             tracked_order = self._in_flight_orders.get(order_id)
             if tracked_order is not None:
@@ -910,7 +910,7 @@ cdef class BinanceExchange(ExchangeBase):
         except Exception as e:
             self.c_stop_tracking_order(order_id)
             self.logger().network(
-                f"Error submitting {side_str} {type_str} order to Binance for "
+                f"Error submitting {side_str} {type_str} order to Globitex for "
                 f"{amount} {trading_pair} "
                 f"{price}.",
                 exc_info=True,
@@ -936,13 +936,13 @@ cdef class BinanceExchange(ExchangeBase):
 
     async def execute_cancel(self, trading_pair: str, order_id: str):
         try:
-            cancel_result = await self.query_api(self._binance_client.cancel_order,
+            cancel_result = await self.query_api(self._Globitex_client.cancel_order,
                                                  symbol=convert_to_exchange_trading_pair(trading_pair),
                                                  origClientOrderId=order_id)
-        except BinanceAPIException as e:
+        except GlobitexAPIException as e:
             if "Unknown order sent" in e.message or e.code == 2011:
                 # The order was never there to begin with. So cancelling it is a no-op but semantically successful.
-                self.logger().debug(f"The order {order_id} does not exist on Binance. No cancellation needed.")
+                self.logger().debug(f"The order {order_id} does not exist on Globitex. No cancellation needed.")
                 self.c_stop_tracking_order(order_id)
                 self.c_trigger_event(self.MARKET_ORDER_CANCELLED_EVENT_TAG,
                                      OrderCancelledEvent(self._current_timestamp, order_id))
@@ -974,7 +974,7 @@ cdef class BinanceExchange(ExchangeBase):
             async with timeout(timeout_seconds):
                 cancellation_results = await safe_gather(*tasks, return_exceptions=True)
                 for cr in cancellation_results:
-                    if isinstance(cr, BinanceAPIException):
+                    if isinstance(cr, GlobitexAPIException):
                         continue
                     if isinstance(cr, dict) and "origClientOrderId" in cr:
                         client_order_id = cr.get("origClientOrderId")
@@ -984,7 +984,7 @@ cdef class BinanceExchange(ExchangeBase):
             self.logger().network(
                 f"Unexpected error cancelling orders.",
                 exc_info=True,
-                app_warning_msg="Failed to cancel order with Binance. Check API key and network connection."
+                app_warning_msg="Failed to cancel order with Globitex. Check API key and network connection."
             )
 
         failed_cancellations = [CancellationResult(oid, False) for oid in order_id_set]
@@ -1010,7 +1010,7 @@ cdef class BinanceExchange(ExchangeBase):
                                 object price,
                                 object amount,
                                 object order_type):
-        self._in_flight_orders[order_id] = BinanceInFlightOrder(
+        self._in_flight_orders[order_id] = GlobitexInFlightOrder(
             client_order_id=order_id,
             exchange_order_id=exchange_order_id,
             trading_pair=trading_pair,
@@ -1086,7 +1086,7 @@ cdef class BinanceExchange(ExchangeBase):
         return self.c_get_order_book(trading_pair)
 
     async def get_open_orders(self) -> List[OpenOrder]:
-        orders = await self.query_api(self._binance_client.get_open_orders)
+        orders = await self.query_api(self._Globitex_client.get_open_orders)
         ret_val = []
         for order in orders:
             if BROKER_ID not in order["clientOrderId"]:
@@ -1109,15 +1109,15 @@ cdef class BinanceExchange(ExchangeBase):
 
     @async_ttl_cache(ttl=30, maxsize=1000)
     async def get_all_my_trades(self, trading_pair: str) -> List[Trade]:
-        # Ths Binance API call rate is 5, so we cache to make sure we don't go over rate limit
-        trades = await self.query_api(self._binance_client.get_my_trades,
+        # Ths Globitex API call rate is 5, so we cache to make sure we don't go over rate limit
+        trades = await self.query_api(self._Globitex_client.get_my_trades,
                                       symbol=convert_to_exchange_trading_pair(trading_pair))
-        from hummingbot.connector.exchange.binance.binance_helper import format_trades
+        from hummingbot.connector.exchange.Globitex.Globitex_helper import format_trades
         return format_trades(trades)
 
     async def get_my_trades(self, trading_pair: str, days_ago: float) -> List[Trade]:
         trades = await self.get_all_my_trades(trading_pair)
-        from hummingbot.connector.exchange.binance.binance_helper import get_utc_timestamp
+        from hummingbot.connector.exchange.Globitex.Globitex_helper import get_utc_timestamp
         if days_ago is not None:
             time = get_utc_timestamp(days_ago) * 1e3
             trades = [t for t in trades if t.timestamp > time]

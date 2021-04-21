@@ -31,46 +31,46 @@ def split_trading_pair(trading_pair: str) -> Optional[Tuple[str, str]]:
 def convert_from_exchange_trading_pair(exchange_trading_pair: str) -> Optional[str]:
     if split_trading_pair(exchange_trading_pair) is None:
         return None
-    # Binance does not split BASEQUOTE (BTCUSDT)
+    # Globitex does not split BASEQUOTE (BTCUSDT)
     base_asset, quote_asset = split_trading_pair(exchange_trading_pair)
     return f"{base_asset}-{quote_asset}"
 
 
 def convert_to_exchange_trading_pair(hb_trading_pair: str) -> str:
-    # Binance does not split BASEQUOTE (BTCUSDT)
+    # Globitex does not split BASEQUOTE (BTCUSDT)
     return hb_trading_pair.replace("-", "")
 
 
 KEYS = {
-    "binance_api_key":
-        ConfigVar(key="binance_api_key",
-                  prompt="Enter your Binance API key >>> ",
-                  required_if=using_exchange("binance"),
+    "Globitex_api_key":
+        ConfigVar(key="Globitex_api_key",
+                  prompt="Enter your Globitex API key >>> ",
+                  required_if=using_exchange("Globitex"),
                   is_secure=True,
                   is_connect_key=True),
-    "binance_api_secret":
-        ConfigVar(key="binance_api_secret",
-                  prompt="Enter your Binance API secret >>> ",
-                  required_if=using_exchange("binance"),
+    "Globitex_api_secret":
+        ConfigVar(key="Globitex_api_secret",
+                  prompt="Enter your Globitex API secret >>> ",
+                  required_if=using_exchange("Globitex"),
                   is_secure=True,
                   is_connect_key=True),
 }
 
-OTHER_DOMAINS = ["binance_us"]
-OTHER_DOMAINS_PARAMETER = {"binance_us": "us"}
-OTHER_DOMAINS_EXAMPLE_PAIR = {"binance_us": "BTC-USDT"}
-OTHER_DOMAINS_DEFAULT_FEES = {"binance_us": [0.1, 0.1]}
-OTHER_DOMAINS_KEYS = {"binance_us": {
-    "binance_us_api_key":
-        ConfigVar(key="binance_us_api_key",
-                  prompt="Enter your Binance US API key >>> ",
-                  required_if=using_exchange("binance_us"),
+OTHER_DOMAINS = ["Globitex_us"]
+OTHER_DOMAINS_PARAMETER = {"Globitex_us": "us"}
+OTHER_DOMAINS_EXAMPLE_PAIR = {"Globitex_us": "BTC-USDT"}
+OTHER_DOMAINS_DEFAULT_FEES = {"Globitex_us": [0.1, 0.1]}
+OTHER_DOMAINS_KEYS = {"Globitex_us": {
+    "Globitex_us_api_key":
+        ConfigVar(key="Globitex_us_api_key",
+                  prompt="Enter your Globitex US API key >>> ",
+                  required_if=using_exchange("Globitex_us"),
                   is_secure=True,
                   is_connect_key=True),
-    "binance_us_api_secret":
-        ConfigVar(key="binance_us_api_secret",
-                  prompt="Enter your Binance US API secret >>> ",
-                  required_if=using_exchange("binance_us"),
+    "Globitex_us_api_secret":
+        ConfigVar(key="Globitex_us_api_secret",
+                  prompt="Enter your Globitex US API secret >>> ",
+                  required_if=using_exchange("Globitex_us"),
                   is_secure=True,
                   is_connect_key=True),
 }}

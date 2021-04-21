@@ -50,7 +50,7 @@ cdef class GlobitexInFlightOrder(InFlightOrderBase):
     @classmethod
     def from_json(cls, data: Dict[str, Any]) -> InFlightOrderBase:
         cdef:
-            BinanceInFlightOrder retval = BinanceInFlightOrder(
+            GlobitexInFlightOrder retval = GlobitexInFlightOrder(
                 client_order_id=data["client_order_id"],
                 exchange_order_id=data["exchange_order_id"],
                 trading_pair=data["trading_pair"],

@@ -23,18 +23,18 @@ from hummingbot.core.data_type.order_book_tracker_data_source import OrderBookTr
 from hummingbot.core.data_type.order_book_message import OrderBookMessage
 from hummingbot.core.data_type.order_book import OrderBook
 from hummingbot.logger import HummingbotLogger
-from hummingbot.connector.exchange.binance.binance_order_book import BinanceOrderBook
-from hummingbot.connector.exchange.binance.binance_utils import convert_to_exchange_trading_pair
+from hummingbot.connector.exchange.Globitex.Globitex_order_book import GlobitexOrderBook
+from hummingbot.connector.exchange.Globitex.Globitex_utils import convert_to_exchange_trading_pair
 
 TRADING_PAIR_FILTER = re.compile(r"(BTC|ETH|USDT)$")
 
-SNAPSHOT_REST_URL = "https://api.binance.{}/api/v1/depth"
-DIFF_STREAM_URL = "wss://stream.binance.{}:9443/ws"
-TICKER_PRICE_CHANGE_URL = "https://api.binance.{}/api/v1/ticker/24hr"
-EXCHANGE_INFO_URL = "https://api.binance.{}/api/v1/exchangeInfo"
+SNAPSHOT_REST_URL = "https://api.Globitex.{}/api/v1/depth"
+DIFF_STREAM_URL = "wss://stream.Globitex.{}:9443/ws"
+TICKER_PRICE_CHANGE_URL = "https://api.Globitex.{}/api/v1/ticker/24hr"
+EXCHANGE_INFO_URL = "https://api.Globitex.{}/api/v1/exchangeInfo"
 
 
-class BinanceAPIOrderBookDataSource(OrderBookTrackerDataSource):
+class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
 
     MESSAGE_TIMEOUT = 30.0
     PING_TIMEOUT = 10.0
@@ -69,9 +69,9 @@ class BinanceAPIOrderBookDataSource(OrderBookTrackerDataSource):
     @staticmethod
     @async_ttl_cache(ttl=2, maxsize=1)
     async def get_all_mid_prices(domain="com") -> Optional[Decimal]:
-        from hummingbot.connector.exchange.binance.binance_utils import convert_from_exchange_trading_pair
+        from hummingbot.connector.exchange.Globitex.Globitex_utils import convert_from_exchange_trading_pair
         async with aiohttp.ClientSession() as client:
-            url = "https://api.binance.{}/api/v3/ticker/bookTicker".format(domain)
+            url = "https://api.Globitex.{}/api/v3/ticker/bookTicker".format(domain)
             resp = await client.get(url)
             resp_json = await resp.json()
             ret_val = {}
@@ -83,7 +83,7 @@ class BinanceAPIOrderBookDataSource(OrderBookTrackerDataSource):
     @staticmethod
     async def fetch_trading_pairs(domain="com") -> List[str]:
         try:
-            from hummingbot.connector.exchange.binance.binance_utils import convert_from_exchange_trading_pair
+            from hummingbot.connector.exchange.Globitex.Globitex_utils import convert_from_exchange_trading_pair
             async with aiohttp.ClientSession() as client:
                 url = EXCHANGE_INFO_URL.format(domain)
                 async with client.get(url, timeout=10) as response:
@@ -99,7 +99,7 @@ class BinanceAPIOrderBookDataSource(OrderBookTrackerDataSource):
                         return trading_pair_list
 
         except Exception:
-            # Do nothing if the request fails -- there will be no autocomplete for binance trading pairs
+            # Do nothing if the request fails -- there will be no autocomplete for Globitex trading pairs
             pass
 
         return []
@@ -127,7 +127,7 @@ class BinanceAPIOrderBookDataSource(OrderBookTrackerDataSource):
         async with aiohttp.ClientSession() as client:
             snapshot: Dict[str, Any] = await self.get_snapshot(client, trading_pair, 1000, self._domain)
             snapshot_timestamp: float = time.time()
-            snapshot_msg: OrderBookMessage = BinanceOrderBook.snapshot_message_from_exchange(
+            snapshot_msg: OrderBookMessage = GlobitexOrderBook.snapshot_message_from_exchange(
                 snapshot,
                 snapshot_timestamp,
                 metadata={"trading_pair": trading_pair}
@@ -170,7 +170,7 @@ class BinanceAPIOrderBookDataSource(OrderBookTrackerDataSource):
                     ws: websockets.WebSocketClientProtocol = ws
                     async for raw_msg in self._inner_messages(ws):
                         msg = ujson.loads(raw_msg)
-                        trade_msg: OrderBookMessage = BinanceOrderBook.trade_message_from_exchange(msg)
+                        trade_msg: OrderBookMessage = GlobitexOrderBook.trade_message_from_exchange(msg)
                         output.put_nowait(trade_msg)
             except asyncio.CancelledError:
                 raise
@@ -191,7 +191,7 @@ class BinanceAPIOrderBookDataSource(OrderBookTrackerDataSource):
                     ws: websockets.WebSocketClientProtocol = ws
                     async for raw_msg in self._inner_messages(ws):
                         msg = ujson.loads(raw_msg)
-                        order_book_message: OrderBookMessage = BinanceOrderBook.diff_message_from_exchange(
+                        order_book_message: OrderBookMessage = GlobitexOrderBook.diff_message_from_exchange(
                             msg, time.time())
                         output.put_nowait(order_book_message)
             except asyncio.CancelledError:
@@ -210,14 +210,14 @@ class BinanceAPIOrderBookDataSource(OrderBookTrackerDataSource):
                             snapshot: Dict[str, Any] = await self.get_snapshot(client, trading_pair,
                                                                                domain=self._domain)
                             snapshot_timestamp: float = time.time()
-                            snapshot_msg: OrderBookMessage = BinanceOrderBook.snapshot_message_from_exchange(
+                            snapshot_msg: OrderBookMessage = GlobitexOrderBook.snapshot_message_from_exchange(
                                 snapshot,
                                 snapshot_timestamp,
                                 metadata={"trading_pair": trading_pair}
                             )
                             output.put_nowait(snapshot_msg)
                             self.logger().debug(f"Saved order book snapshot for {trading_pair}")
-                            # Be careful not to go above Binance's API rate limits.
+                            # Be careful not to go above Globitex's API rate limits.
                             await asyncio.sleep(5.0)
                         except asyncio.CancelledError:
                             raise

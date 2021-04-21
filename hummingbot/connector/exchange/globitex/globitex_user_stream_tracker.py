@@ -12,11 +12,11 @@ from hummingbot.core.utils.async_utils import (
     safe_ensure_future,
     safe_gather,
 )
-from .binance_api_user_stream_data_source import BinanceAPIUserStreamDataSource
-from binance.client import Client as BinanceClient
+from .Globitex_api_user_stream_data_source import GlobitexAPIUserStreamDataSource
+from Globitex.client import Client as GlobitexClient
 
 
-class BinanceUserStreamTracker(UserStreamTracker):
+class GlobitexUserStreamTracker(UserStreamTracker):
     _bust_logger: Optional[HummingbotLogger] = None
 
     @classmethod
@@ -25,9 +25,9 @@ class BinanceUserStreamTracker(UserStreamTracker):
             cls._bust_logger = logging.getLogger(__name__)
         return cls._bust_logger
 
-    def __init__(self, binance_client: Optional[BinanceClient] = None, domain: str = "com"):
+    def __init__(self, Globitex_client: Optional[GlobitexClient] = None, domain: str = "com"):
         super().__init__()
-        self._binance_client: BinanceClient = binance_client
+        self._Globitex_client: GlobitexClient = Globitex_client
         self._ev_loop: asyncio.events.AbstractEventLoop = asyncio.get_event_loop()
         self._data_source: Optional[UserStreamTrackerDataSource] = None
         self._user_stream_tracking_task: Optional[asyncio.Task] = None
@@ -36,15 +36,15 @@ class BinanceUserStreamTracker(UserStreamTracker):
     @property
     def data_source(self) -> UserStreamTrackerDataSource:
         if not self._data_source:
-            self._data_source = BinanceAPIUserStreamDataSource(binance_client=self._binance_client, domain=self._domain)
+            self._data_source = GlobitexAPIUserStreamDataSource(Globitex_client=self._Globitex_client, domain=self._domain)
         return self._data_source
 
     @property
     def exchange_name(self) -> str:
         if self._domain == "com":
-            return "binance"
+            return "Globitex"
         else:
-            return f"binance_{self._domain}"
+            return f"Globitex_{self._domain}"
 
     async def start(self):
         self._user_stream_tracking_task = safe_ensure_future(

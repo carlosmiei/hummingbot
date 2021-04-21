@@ -6,7 +6,7 @@ from hummingbot.core.data_type.transaction_tracker cimport TransactionTracker
 cdef class GlobitexExchange(ExchangeBase):
     cdef:
         object _user_stream_tracker
-        object _binance_client
+        object _Globitex_client
         object _ev_loop
         object _poll_notifier
         double _last_timestamp

@@ -10,11 +10,11 @@ from hummingbot.logger import HummingbotLogger
 from hummingbot.core.utils.async_utils import safe_ensure_future
 
 
-class BinanceTime:
+class GlobitexTime:
     """
-    Used to monkey patch Binance client's time module to adjust request timestamp when needed
+    Used to monkey patch Globitex client's time module to adjust request timestamp when needed
     """
-    BINANCE_TIME_API = "https://api.binance.com/api/v1/time"
+    Globitex_TIME_API = "https://api.Globitex.com/api/v1/time"
     NaN = float("nan")
     _bt_logger = None
     _bt_shared_instance = None
@@ -26,9 +26,9 @@ class BinanceTime:
         return cls._bt_logger
 
     @classmethod
-    def get_instance(cls) -> "BinanceTime":
+    def get_instance(cls) -> "GlobitexTime":
         if cls._bt_shared_instance is None:
-            cls._bt_shared_instance = BinanceTime()
+            cls._bt_shared_instance = GlobitexTime()
         return cls._bt_shared_instance
 
     def __init__(self, check_interval: float = 60.0):
@@ -100,17 +100,17 @@ class BinanceTime:
         try:
             local_before_ms: float = time.perf_counter() * 1e3
             async with aiohttp.ClientSession() as session:
-                async with session.get(self.BINANCE_TIME_API) as resp:
+                async with session.get(self.Globitex_TIME_API) as resp:
                     resp_data: Dict[str, float] = await resp.json()
-                    binance_server_time_ms: float = float(resp_data["serverTime"])
+                    Globitex_server_time_ms: float = float(resp_data["serverTime"])
                     local_after_ms: float = time.perf_counter() * 1e3
             local_server_time_pre_image_ms: float = (local_before_ms + local_after_ms) / 2.0
-            time_offset_ms: float = binance_server_time_ms - local_server_time_pre_image_ms
+            time_offset_ms: float = Globitex_server_time_ms - local_server_time_pre_image_ms
             self.add_time_offset_ms_sample(time_offset_ms)
             self._last_update_local_time = time.perf_counter()
         except asyncio.CancelledError:
             raise
         except Exception:
-            self.logger().network("Error getting Binance server time.", exc_info=True,
-                                  app_warning_msg="Could not refresh Binance server time. "
+            self.logger().network("Error getting Globitex server time.", exc_info=True,
+                                  app_warning_msg="Could not refresh Globitex server time. "
                                                   "Check network connection.")

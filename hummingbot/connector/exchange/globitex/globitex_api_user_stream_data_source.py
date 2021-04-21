@@ -13,15 +13,15 @@ import ujson
 import websockets
 from hummingbot.core.data_type.user_stream_tracker_data_source import UserStreamTrackerDataSource
 from hummingbot.core.utils.async_utils import safe_ensure_future
-from binance.client import Client as BinanceClient
+from Globitex.client import Client as GlobitexClient
 from hummingbot.logger import HummingbotLogger
 
-BINANCE_API_ENDPOINT = "https://api.binance.{}/api/v1/"
-BINANCE_USER_STREAM_ENDPOINT = "userDataStream"
-BINANCE_WSS_USER_STREAM = "wss://stream.binance.{}:9443/ws/"
+Globitex_API_ENDPOINT = "https://api.Globitex.{}/api/v1/"
+Globitex_USER_STREAM_ENDPOINT = "userDataStream"
+Globitex_WSS_USER_STREAM = "wss://stream.Globitex.{}:9443/ws/"
 
 
-class BinanceAPIUserStreamDataSource(UserStreamTrackerDataSource):
+class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
 
     MESSAGE_TIMEOUT = 30.0
     PING_TIMEOUT = 10.0
@@ -34,8 +34,8 @@ class BinanceAPIUserStreamDataSource(UserStreamTrackerDataSource):
             cls._bausds_logger = logging.getLogger(__name__)
         return cls._bausds_logger
 
-    def __init__(self, binance_client: BinanceClient, domain: str = "com"):
-        self._binance_client: BinanceClient = binance_client
+    def __init__(self, Globitex_client: GlobitexClient, domain: str = "com"):
+        self._Globitex_client: GlobitexClient = Globitex_client
         self._current_listen_key = None
         self._listen_for_user_stream_task = None
         self._last_recv_time: float = 0
@@ -48,9 +48,9 @@ class BinanceAPIUserStreamDataSource(UserStreamTrackerDataSource):
 
     async def get_listen_key(self):
         async with aiohttp.ClientSession() as client:
-            url = BINANCE_API_ENDPOINT.format(self._domain)
-            async with client.post(f"{url}{BINANCE_USER_STREAM_ENDPOINT}",
-                                   headers={"X-MBX-APIKEY": self._binance_client.API_KEY}) as response:
+            url = Globitex_API_ENDPOINT.format(self._domain)
+            async with client.post(f"{url}{Globitex_USER_STREAM_ENDPOINT}",
+                                   headers={"X-MBX-APIKEY": self._Globitex_client.API_KEY}) as response:
                 response: aiohttp.ClientResponse = response
                 if response.status != 200:
                     raise IOError(f"Error fetching user stream listen key. HTTP status is {response.status}.")
@@ -59,9 +59,9 @@ class BinanceAPIUserStreamDataSource(UserStreamTrackerDataSource):
 
     async def ping_listen_key(self, listen_key: str) -> bool:
         async with aiohttp.ClientSession() as client:
-            url = BINANCE_API_ENDPOINT.format(self._domain)
-            async with client.put(f"{url}{BINANCE_USER_STREAM_ENDPOINT}",
-                                  headers={"X-MBX-APIKEY": self._binance_client.API_KEY},
+            url = Globitex_API_ENDPOINT.format(self._domain)
+            async with client.put(f"{url}{Globitex_USER_STREAM_ENDPOINT}",
+                                  headers={"X-MBX-APIKEY": self._Globitex_client.API_KEY},
                                   params={"listenKey": listen_key}) as response:
                 data: [str, any] = await response.json()
                 if "code" in data:
@@ -98,7 +98,7 @@ class BinanceAPIUserStreamDataSource(UserStreamTrackerDataSource):
                 yield msg
 
     async def get_ws_connection(self) -> websockets.WebSocketClientProtocol:
-        url = BINANCE_WSS_USER_STREAM.format(self._domain)
+        url = Globitex_WSS_USER_STREAM.format(self._domain)
         stream_url: str = f"{url}{self._current_listen_key}"
         self.logger().info(f"Reconnecting to {stream_url}.")
 
