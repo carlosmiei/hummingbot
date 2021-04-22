@@ -28,7 +28,7 @@ from hummingbot.connector.exchange.Globitex.Globitex_utils import convert_to_exc
 
 TRADING_PAIR_FILTER = re.compile(r"(BTC|ETH|USDT)$")
 
-SNAPSHOT_REST_URL = "https://api.Globitex.{}/api/v1/depth"
+SNAPSHOT_REST_URL = "https://api.globitex.com"
 DIFF_STREAM_URL = "wss://stream.Globitex.{}:9443/ws"
 TICKER_PRICE_CHANGE_URL = "https://api.Globitex.{}/api/v1/ticker/24hr"
 EXCHANGE_INFO_URL = "https://api.Globitex.{}/api/v1/exchangeInfo"

@@ -1,7 +1,7 @@
 from decimal import Decimal
 from datetime import datetime, timezone
 from hummingbot.core.data_type.trade import Trade, TradeType, TradeFee
-from hummingbot.connector.exchange.Globitex.Globitex_utils import (
+from hummingbot.connector.exchange.globitex.globitext_utils import (
     convert_from_exchange_trading_pair,
 )
 

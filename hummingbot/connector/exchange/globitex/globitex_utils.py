@@ -56,21 +56,21 @@ KEYS = {
                   is_connect_key=True),
 }
 
-OTHER_DOMAINS = ["Globitex_us"]
-OTHER_DOMAINS_PARAMETER = {"Globitex_us": "us"}
-OTHER_DOMAINS_EXAMPLE_PAIR = {"Globitex_us": "BTC-USDT"}
-OTHER_DOMAINS_DEFAULT_FEES = {"Globitex_us": [0.1, 0.1]}
-OTHER_DOMAINS_KEYS = {"Globitex_us": {
-    "Globitex_us_api_key":
-        ConfigVar(key="Globitex_us_api_key",
+OTHER_DOMAINS = ["Globitex"]
+OTHER_DOMAINS_PARAMETER = {"Globitex": "us"}
+OTHER_DOMAINS_EXAMPLE_PAIR = {"Globitex": "BTC-USDT"}
+OTHER_DOMAINS_DEFAULT_FEES = {"Globitex": [0.1, 0.1]}
+OTHER_DOMAINS_KEYS = {"Globitex": {
+    "Globitex_api_key":
+        ConfigVar(key="Globitex_api_key",
                   prompt="Enter your Globitex US API key >>> ",
-                  required_if=using_exchange("Globitex_us"),
+                  required_if=using_exchange("Globitex"),
                   is_secure=True,
                   is_connect_key=True),
-    "Globitex_us_api_secret":
-        ConfigVar(key="Globitex_us_api_secret",
+    "Globitex_api_secret":
+        ConfigVar(key="Globitex_api_secret",
                   prompt="Enter your Globitex US API secret >>> ",
-                  required_if=using_exchange("Globitex_us"),
+                  required_if=using_exchange("Globitex"),
                   is_secure=True,
                   is_connect_key=True),
 }}
