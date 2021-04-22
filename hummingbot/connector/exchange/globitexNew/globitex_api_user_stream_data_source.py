@@ -6,11 +6,11 @@ import logging
 from typing import Optional, List, AsyncIterable, Any
 from hummingbot.core.data_type.user_stream_tracker_data_source import UserStreamTrackerDataSource
 from hummingbot.logger import HummingbotLogger
-from .crypto_com_auth import CryptoComAuth
-from .crypto_com_websocket import CryptoComWebsocket
+from .globitex_auth import GlobitexAuth
+from .globitex_websocket import GlobitexWebsocket
 
 
-class CryptoComAPIUserStreamDataSource(UserStreamTrackerDataSource):
+class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
     MAX_RETRIES = 20
     MESSAGE_TIMEOUT = 30.0
 
@@ -22,8 +22,8 @@ class CryptoComAPIUserStreamDataSource(UserStreamTrackerDataSource):
             cls._logger = logging.getLogger(__name__)
         return cls._logger
 
-    def __init__(self, crypto_com_auth: CryptoComAuth, trading_pairs: Optional[List[str]] = []):
-        self._crypto_com_auth: CryptoComAuth = crypto_com_auth
+    def __init__(self, crypto_com_auth: GlobitexAuth, trading_pairs: Optional[List[str]] = []):
+        self._crypto_com_auth: GlobitexAuth = crypto_com_auth
         self._trading_pairs = trading_pairs
         self._current_listen_key = None
         self._listen_for_user_stream_task = None
@@ -40,7 +40,7 @@ class CryptoComAPIUserStreamDataSource(UserStreamTrackerDataSource):
         """
 
         try:
-            ws = CryptoComWebsocket(self._crypto_com_auth)
+            ws = GlobitexWebsocket(self._crypto_com_auth)
             await ws.connect()
             await ws.subscribe(["user.order", "user.trade", "user.balance"])
             async for msg in ws.on_message():
@@ -71,6 +71,6 @@ class CryptoComAPIUserStreamDataSource(UserStreamTrackerDataSource):
                 raise
             except Exception:
                 self.logger().error(
-                    "Unexpected error with CryptoCom WebSocket connection. " "Retrying after 30 seconds...", exc_info=True
+                    "Unexpected error with Globitex WebSocket connection. " "Retrying after 30 seconds...", exc_info=True
                 )
                 await asyncio.sleep(30.0)
