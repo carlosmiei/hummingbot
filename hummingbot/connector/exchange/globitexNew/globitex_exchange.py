@@ -315,10 +315,10 @@ class GlobitexExchange(ExchangeBase):
         if is_auth_required:
             request_id = globitex_utils.RequestId.generate_request_id()
             data = {"params": params}
-            params = self._globitex_auth.generate_auth_dict(
+            headers, params = self._globitex_auth.generate_auth_dict(
                 path_url, request_id, globitex_utils.get_ms_timestamp(), data
             )
-            headers = self._globitex_auth.get_headers()
+            # headers = self._globitex_auth.get_headers()
         else:
             headers = {"Content-Type": "application/json"}
 
