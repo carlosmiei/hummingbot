@@ -32,7 +32,7 @@ from hummingbot.core.event.events import (
     MarketOrderFailureEvent,
     OrderType,
     TradeType,
-    TradeFee
+    TradeFee,
 )
 from hummingbot.connector.exchange_base import ExchangeBase
 from hummingbot.connector.exchange.globitexNew.globitex_order_book_tracker import GlobitexOrderBookTracker
@@ -42,6 +42,7 @@ from hummingbot.connector.exchange.globitexNew.globitex_in_flight_order import G
 from hummingbot.connector.exchange.globitexNew import globitex_utils
 from hummingbot.connector.exchange.globitexNew import globitex_constants as Constants
 from hummingbot.core.data_type.common import OpenOrder
+
 ctce_logger = None
 s_decimal_NaN = Decimal("nan")
 
@@ -51,6 +52,7 @@ class GlobitexExchange(ExchangeBase):
     GlobitexExchange connects with Crypto.com exchange and provides order book pricing, user account tracking and
     trading functionality.
     """
+
     API_CALL_TIMEOUT = 10.0
     SHORT_POLL_INTERVAL = 5.0
     UPDATE_ORDER_STATUS_MIN_INTERVAL = 10.0
@@ -63,12 +65,13 @@ class GlobitexExchange(ExchangeBase):
             ctce_logger = logging.getLogger(__name__)
         return ctce_logger
 
-    def __init__(self,
-                 globitex_api_key: str,
-                 globitex_secret_key: str,
-                 trading_pairs: Optional[List[str]] = None,
-                 trading_required: bool = True
-                 ):
+    def __init__(
+        self,
+        globitex_api_key: str,
+        globitex_secret_key: str,
+        trading_pairs: Optional[List[str]] = None,
+        trading_required: bool = True,
+    ):
         """
         :param globitex_api_key: The API key to connect to private Crypto.com APIs.
         :param globitex_secret_key: The API secret.
@@ -118,8 +121,9 @@ class GlobitexExchange(ExchangeBase):
             "order_books_initialized": self._order_book_tracker.ready,
             "account_balance": len(self._account_balances) > 0 if self._trading_required else True,
             "trading_rule_initialized": len(self._trading_rules) > 0,
-            "user_stream_initialized":
-                self._user_stream_tracker.data_source.last_recv_time > 0 if self._trading_required else True,
+            "user_stream_initialized": self._user_stream_tracker.data_source.last_recv_time > 0
+            if self._trading_required
+            else True,
         }
 
     @property
@@ -132,21 +136,14 @@ class GlobitexExchange(ExchangeBase):
 
     @property
     def limit_orders(self) -> List[LimitOrder]:
-        return [
-            in_flight_order.to_limit_order()
-            for in_flight_order in self._in_flight_orders.values()
-        ]
+        return [in_flight_order.to_limit_order() for in_flight_order in self._in_flight_orders.values()]
 
     @property
     def tracking_states(self) -> Dict[str, any]:
         """
         :return active in-flight orders in json format, is used to save in sqlite db.
         """
-        return {
-            key: value.to_json()
-            for key, value in self._in_flight_orders.items()
-            if not value.is_done
-        }
+        return {key: value.to_json() for key, value in self._in_flight_orders.items() if not value.is_done}
 
     def restore_tracking_states(self, saved_states: Dict[str, any]):
         """
@@ -154,10 +151,9 @@ class GlobitexExchange(ExchangeBase):
         when it disconnects.
         :param saved_states: The saved tracking_states.
         """
-        self._in_flight_orders.update({
-            key: GlobitexInFlightOrder.from_json(value)
-            for key, value in saved_states.items()
-        })
+        self._in_flight_orders.update(
+            {key: GlobitexInFlightOrder.from_json(value) for key, value in saved_states.items()}
+        )
 
     def supported_order_types(self) -> List[OrderType]:
         """
@@ -245,10 +241,11 @@ class GlobitexExchange(ExchangeBase):
             except asyncio.CancelledError:
                 raise
             except Exception as e:
-                self.logger().network(f"Unexpected error while fetching trading rules. Error: {str(e)}",
-                                      exc_info=True,
-                                      app_warning_msg="Could not fetch new trading rules from Crypto.com. "
-                                                      "Check network connection.")
+                self.logger().network(
+                    f"Unexpected error while fetching trading rules. Error: {str(e)}",
+                    exc_info=True,
+                    app_warning_msg="Could not fetch new trading rules from Crypto.com. " "Check network connection.",
+                )
                 await asyncio.sleep(0.5)
 
     async def _update_trading_rules(self):
@@ -295,18 +292,16 @@ class GlobitexExchange(ExchangeBase):
                 # E.g. a price decimal of 2 means 0.01 incremental.
                 price_step = Decimal("1") / Decimal(str(math.pow(10, price_decimals)))
                 quantity_step = Decimal("1") / Decimal(str(math.pow(10, quantity_decimals)))
-                result[trading_pair] = TradingRule(trading_pair,
-                                                   min_price_increment=price_step,
-                                                   min_base_amount_increment=quantity_step)
+                result[trading_pair] = TradingRule(
+                    trading_pair, min_price_increment=price_step, min_base_amount_increment=quantity_step
+                )
             except Exception:
                 self.logger().error(f"Error parsing the trading pair rule {rule}. Skipping.", exc_info=True)
         return result
 
-    async def _api_request(self,
-                           method: str,
-                           path_url: str,
-                           params: Dict[str, Any] = {},
-                           is_auth_required: bool = False) -> Dict[str, Any]:
+    async def _api_request(
+        self, method: str, path_url: str, params: Dict[str, Any] = {}, is_auth_required: bool = False
+    ) -> Dict[str, Any]:
         """
         Sends an aiohttp request and waits for a response.
         :param method: The HTTP method, e.g. get or post
@@ -320,7 +315,9 @@ class GlobitexExchange(ExchangeBase):
         if is_auth_required:
             request_id = globitex_utils.RequestId.generate_request_id()
             data = {"params": params}
-            params = self._globitex_auth.generate_auth_dict(path_url, request_id, globitex_utils.get_ms_timestamp(), data)
+            params = self._globitex_auth.generate_auth_dict(
+                path_url, request_id, globitex_utils.get_ms_timestamp(), data
+            )
             headers = self._globitex_auth.get_headers()
         else:
             headers = {"Content-Type": "application/json"}
@@ -338,8 +335,9 @@ class GlobitexExchange(ExchangeBase):
         except Exception as e:
             raise IOError(f"Error parsing data from {url}. Error: {str(e)}")
         if response.status != 200:
-            raise IOError(f"Error fetching data from {url}. HTTP status is {response.status}. "
-                          f"Message: {parsed_response}")
+            raise IOError(
+                f"Error fetching data from {url}. HTTP status is {response.status}. " f"Message: {parsed_response}"
+            )
         if parsed_response["code"] != 0:
             raise IOError(f"{url} API call failed, response: {parsed_response}")
         # print(f"REQUEST: {method} {path_url} {params}")
@@ -365,8 +363,9 @@ class GlobitexExchange(ExchangeBase):
             raise ValueError(f"No order book exists for '{trading_pair}'.")
         return self._order_book_tracker.order_books[trading_pair]
 
-    def buy(self, trading_pair: str, amount: Decimal, order_type=OrderType.MARKET,
-            price: Decimal = s_decimal_NaN, **kwargs) -> str:
+    def buy(
+        self, trading_pair: str, amount: Decimal, order_type=OrderType.MARKET, price: Decimal = s_decimal_NaN, **kwargs
+    ) -> str:
         """
         Buys an amount of base asset (of the given trading pair). This function returns immediately.
         To see an actual order, you'll have to wait for BuyOrderCreatedEvent.
@@ -380,8 +379,9 @@ class GlobitexExchange(ExchangeBase):
         safe_ensure_future(self._create_order(TradeType.BUY, order_id, trading_pair, amount, order_type, price))
         return order_id
 
-    def sell(self, trading_pair: str, amount: Decimal, order_type=OrderType.MARKET,
-             price: Decimal = s_decimal_NaN, **kwargs) -> str:
+    def sell(
+        self, trading_pair: str, amount: Decimal, order_type=OrderType.MARKET, price: Decimal = s_decimal_NaN, **kwargs
+    ) -> str:
         """
         Sells an amount of base asset (of the given trading pair). This function returns immediately.
         To see an actual order, you'll have to wait for SellOrderCreatedEvent.
@@ -405,13 +405,15 @@ class GlobitexExchange(ExchangeBase):
         safe_ensure_future(self._execute_cancel(trading_pair, order_id))
         return order_id
 
-    async def _create_order(self,
-                            trade_type: TradeType,
-                            order_id: str,
-                            trading_pair: str,
-                            amount: Decimal,
-                            order_type: OrderType,
-                            price: Decimal):
+    async def _create_order(
+        self,
+        trade_type: TradeType,
+        order_id: str,
+        trading_pair: str,
+        amount: Decimal,
+        order_type: OrderType,
+        price: Decimal,
+    ):
         """
         Calls create-order API end point to place an order, starts tracking the order and triggers order created event.
         :param trade_type: BUY or SELL
@@ -428,45 +430,35 @@ class GlobitexExchange(ExchangeBase):
         amount = self.quantize_order_amount(trading_pair, amount)
         price = self.quantize_order_price(trading_pair, price)
         if amount < trading_rule.min_order_size:
-            raise ValueError(f"Buy order amount {amount} is lower than the minimum order size "
-                             f"{trading_rule.min_order_size}.")
-        api_params = {"instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
-                      "side": trade_type.name,
-                      "type": "LIMIT",
-                      "price": f"{price:f}",
-                      "quantity": f"{amount:f}",
-                      "client_oid": order_id
-                      }
+            raise ValueError(
+                f"Buy order amount {amount} is lower than the minimum order size " f"{trading_rule.min_order_size}."
+            )
+        api_params = {
+            "instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
+            "side": trade_type.name,
+            "type": "LIMIT",
+            "price": f"{price:f}",
+            "quantity": f"{amount:f}",
+            "client_oid": order_id,
+        }
         if order_type is OrderType.LIMIT_MAKER:
             api_params["exec_inst"] = "POST_ONLY"
-        self.start_tracking_order(order_id,
-                                  None,
-                                  trading_pair,
-                                  trade_type,
-                                  price,
-                                  amount,
-                                  order_type
-                                  )
+        self.start_tracking_order(order_id, None, trading_pair, trade_type, price, amount, order_type)
         try:
             order_result = await self._api_request("post", "private/create-order", api_params, True)
             exchange_order_id = str(order_result["result"]["order_id"])
             tracked_order = self._in_flight_orders.get(order_id)
             if tracked_order is not None:
-                self.logger().info(f"Created {order_type.name} {trade_type.name} order {order_id} for "
-                                   f"{amount} {trading_pair}.")
+                self.logger().info(
+                    f"Created {order_type.name} {trade_type.name} order {order_id} for " f"{amount} {trading_pair}."
+                )
                 tracked_order.update_exchange_order_id(exchange_order_id)
 
             event_tag = MarketEvent.BuyOrderCreated if trade_type is TradeType.BUY else MarketEvent.SellOrderCreated
             event_class = BuyOrderCreatedEvent if trade_type is TradeType.BUY else SellOrderCreatedEvent
-            self.trigger_event(event_tag,
-                               event_class(
-                                   self.current_timestamp,
-                                   order_type,
-                                   trading_pair,
-                                   amount,
-                                   price,
-                                   order_id
-                               ))
+            self.trigger_event(
+                event_tag, event_class(self.current_timestamp, order_type, trading_pair, amount, price, order_id)
+            )
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -476,19 +468,22 @@ class GlobitexExchange(ExchangeBase):
                 f"{amount} {trading_pair} "
                 f"{price}.",
                 exc_info=True,
-                app_warning_msg=str(e)
+                app_warning_msg=str(e),
             )
-            self.trigger_event(MarketEvent.OrderFailure,
-                               MarketOrderFailureEvent(self.current_timestamp, order_id, order_type))
+            self.trigger_event(
+                MarketEvent.OrderFailure, MarketOrderFailureEvent(self.current_timestamp, order_id, order_type)
+            )
 
-    def start_tracking_order(self,
-                             order_id: str,
-                             exchange_order_id: str,
-                             trading_pair: str,
-                             trade_type: TradeType,
-                             price: Decimal,
-                             amount: Decimal,
-                             order_type: OrderType):
+    def start_tracking_order(
+        self,
+        order_id: str,
+        exchange_order_id: str,
+        trading_pair: str,
+        trade_type: TradeType,
+        price: Decimal,
+        amount: Decimal,
+        order_type: OrderType,
+    ):
         """
         Starts tracking an order by simply adding it into _in_flight_orders dictionary.
         """
@@ -499,7 +494,7 @@ class GlobitexExchange(ExchangeBase):
             order_type=order_type,
             trade_type=trade_type,
             price=price,
-            amount=amount
+            amount=amount,
         )
 
     def stop_tracking_order(self, order_id: str):
@@ -527,9 +522,11 @@ class GlobitexExchange(ExchangeBase):
             await self._api_request(
                 "post",
                 "private/cancel-order",
-                {"instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
-                 "order_id": ex_order_id},
-                True
+                {
+                    "instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
+                    "order_id": ex_order_id,
+                },
+                True,
             )
             return order_id
         except asyncio.CancelledError:
@@ -539,7 +536,7 @@ class GlobitexExchange(ExchangeBase):
                 f"Failed to cancel order {order_id}: {str(e)}",
                 exc_info=True,
                 app_warning_msg=f"Failed to cancel the order {order_id} on Globitex. "
-                                f"Check API key and network connection."
+                f"Check API key and network connection.",
             )
 
     async def _status_polling_loop(self):
@@ -552,18 +549,19 @@ class GlobitexExchange(ExchangeBase):
                 self._poll_notifier = asyncio.Event()
                 await self._poll_notifier.wait()
                 await safe_gather(
-                    self._update_balances(),
-                    self._update_order_status(),
+                    self._update_balances(), self._update_order_status(),
                 )
                 self._last_poll_timestamp = self.current_timestamp
             except asyncio.CancelledError:
                 raise
             except Exception as e:
                 self.logger().error(str(e), exc_info=True)
-                self.logger().network("Unexpected error while fetching account updates.",
-                                      exc_info=True,
-                                      app_warning_msg="Could not fetch account updates from Crypto.com. "
-                                                      "Check API key and network connection.")
+                self.logger().network(
+                    "Unexpected error while fetching account updates.",
+                    exc_info=True,
+                    app_warning_msg="Could not fetch account updates from Crypto.com. "
+                    "Check API key and network connection.",
+                )
                 await asyncio.sleep(0.5)
 
     async def _update_balances(self):
@@ -598,10 +596,11 @@ class GlobitexExchange(ExchangeBase):
             tasks = []
             for tracked_order in tracked_orders:
                 order_id = await tracked_order.get_exchange_order_id()
-                tasks.append(self._api_request("get",
-                                               "1/trading/order",
-                                               {"clientOrderId": order_id, "account": self.get_account_id()},
-                                               True))
+                tasks.append(
+                    self._api_request(
+                        "get", "1/trading/order", {"clientOrderId": order_id, "account": self.get_account_id()}, True
+                    )
+                )
             self.logger().debug(f"Polling for order status updates of {len(tasks)} orders.")
             responses = await safe_gather(*tasks, return_exceptions=True)
             for response in responses:
@@ -629,21 +628,18 @@ class GlobitexExchange(ExchangeBase):
         tracked_order.last_state = order_msg["orderStatus"]
         if tracked_order.is_cancelled:
             self.logger().info(f"Successfully cancelled order {client_order_id}.")
-            self.trigger_event(MarketEvent.OrderCancelled,
-                               OrderCancelledEvent(
-                                   self.current_timestamp,
-                                   client_order_id))
+            self.trigger_event(MarketEvent.OrderCancelled, OrderCancelledEvent(self.current_timestamp, client_order_id))
             tracked_order.cancelled_event.set()
             self.stop_tracking_order(client_order_id)
         elif tracked_order.is_failure:
-            self.logger().info(f"The market order {client_order_id} has failed according to order status API. "
-                               f"Reason: {globitex_utils.get_api_reason(order_msg['reason'])}")  # check this we don't have reason on the response
-            self.trigger_event(MarketEvent.OrderFailure,
-                               MarketOrderFailureEvent(
-                                   self.current_timestamp,
-                                   client_order_id,
-                                   tracked_order.order_type
-                               ))
+            self.logger().info(
+                f"The market order {client_order_id} has failed according to order status API. "
+                f"Reason: {globitex_utils.get_api_reason(order_msg['reason'])}"
+            )  # check this we don't have reason on the response
+            self.trigger_event(
+                MarketEvent.OrderFailure,
+                MarketOrderFailureEvent(self.current_timestamp, client_order_id, tracked_order.order_type),
+            )
             self.stop_tracking_order(client_order_id)
 
     async def _process_trade_message(self, trade_msg: Dict[str, Any]):
@@ -671,29 +667,41 @@ class GlobitexExchange(ExchangeBase):
                 Decimal(str(trade_msg["traded_price"])),
                 Decimal(str(trade_msg["traded_quantity"])),
                 TradeFee(0.0, [(trade_msg["fee_currency"], Decimal(str(trade_msg["fee"])))]),
-                exchange_trade_id=trade_msg["order_id"]
-            )
+                exchange_trade_id=trade_msg["order_id"],
+            ),
         )
-        if math.isclose(tracked_order.executed_amount_base, tracked_order.amount) or \
-                tracked_order.executed_amount_base >= tracked_order.amount:
+        if (
+            math.isclose(tracked_order.executed_amount_base, tracked_order.amount)
+            or tracked_order.executed_amount_base >= tracked_order.amount
+        ):
             tracked_order.last_state = "FILLED"
-            self.logger().info(f"The {tracked_order.trade_type.name} order "
-                               f"{tracked_order.client_order_id} has completed "
-                               f"according to order status API.")
-            event_tag = MarketEvent.BuyOrderCompleted if tracked_order.trade_type is TradeType.BUY \
+            self.logger().info(
+                f"The {tracked_order.trade_type.name} order "
+                f"{tracked_order.client_order_id} has completed "
+                f"according to order status API."
+            )
+            event_tag = (
+                MarketEvent.BuyOrderCompleted
+                if tracked_order.trade_type is TradeType.BUY
                 else MarketEvent.SellOrderCompleted
-            event_class = BuyOrderCompletedEvent if tracked_order.trade_type is TradeType.BUY \
-                else SellOrderCompletedEvent
-            self.trigger_event(event_tag,
-                               event_class(self.current_timestamp,
-                                           tracked_order.client_order_id,
-                                           tracked_order.base_asset,
-                                           tracked_order.quote_asset,
-                                           tracked_order.fee_asset,
-                                           tracked_order.executed_amount_base,
-                                           tracked_order.executed_amount_quote,
-                                           tracked_order.fee_paid,
-                                           tracked_order.order_type))
+            )
+            event_class = (
+                BuyOrderCompletedEvent if tracked_order.trade_type is TradeType.BUY else SellOrderCompletedEvent
+            )
+            self.trigger_event(
+                event_tag,
+                event_class(
+                    self.current_timestamp,
+                    tracked_order.client_order_id,
+                    tracked_order.base_asset,
+                    tracked_order.quote_asset,
+                    tracked_order.fee_asset,
+                    tracked_order.executed_amount_base,
+                    tracked_order.executed_amount_quote,
+                    tracked_order.fee_paid,
+                    tracked_order.order_type,
+                ),
+            )
             self.stop_tracking_order(tracked_order.client_order_id)
 
     async def cancel_all(self, timeout_seconds: float):
@@ -710,24 +718,28 @@ class GlobitexExchange(ExchangeBase):
             for trading_pair in self._trading_pairs:
                 await self._api_request(
                     "post",
-                    "private/cancel-all-orders",
-                    {"instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair)},
-                    True
+                    "1/trading/cancel_orders",
+                    {
+                        "symbols": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
+                        "account": self.get_account_id(),
+                    },
+                    True,
                 )
             open_orders = await self.get_open_orders()
             for cl_order_id, tracked_order in self._in_flight_orders.items():
                 open_order = [o for o in open_orders if o.client_order_id == cl_order_id]
                 if not open_order:
                     cancellation_results.append(CancellationResult(cl_order_id, True))
-                    self.trigger_event(MarketEvent.OrderCancelled,
-                                       OrderCancelledEvent(self.current_timestamp, cl_order_id))
+                    self.trigger_event(
+                        MarketEvent.OrderCancelled, OrderCancelledEvent(self.current_timestamp, cl_order_id)
+                    )
                 else:
                     cancellation_results.append(CancellationResult(cl_order_id, False))
         except Exception:
             self.logger().network(
                 "Failed to cancel all orders.",
                 exc_info=True,
-                app_warning_msg="Failed to cancel all orders on Crypto.com. Check API key and network connection."
+                app_warning_msg="Failed to cancel all orders on Crypto.com. Check API key and network connection.",
             )
         return cancellation_results
 
@@ -737,9 +749,11 @@ class GlobitexExchange(ExchangeBase):
         It checks if status polling task is due for execution.
         """
         now = time.time()
-        poll_interval = (self.SHORT_POLL_INTERVAL
-                         if now - self._user_stream_tracker.last_recv_time > 60.0
-                         else self.LONG_POLL_INTERVAL)
+        poll_interval = (
+            self.SHORT_POLL_INTERVAL
+            if now - self._user_stream_tracker.last_recv_time > 60.0
+            else self.LONG_POLL_INTERVAL
+        )
         last_tick = int(self._last_timestamp / poll_interval)
         current_tick = int(timestamp / poll_interval)
         if current_tick > last_tick:
@@ -747,13 +761,15 @@ class GlobitexExchange(ExchangeBase):
                 self._poll_notifier.set()
         self._last_timestamp = timestamp
 
-    def get_fee(self,
-                base_currency: str,
-                quote_currency: str,
-                order_type: OrderType,
-                order_side: TradeType,
-                amount: Decimal,
-                price: Decimal = s_decimal_NaN) -> TradeFee:
+    def get_fee(
+        self,
+        base_currency: str,
+        quote_currency: str,
+        order_type: OrderType,
+        order_side: TradeType,
+        amount: Decimal,
+        price: Decimal = s_decimal_NaN,
+    ) -> TradeFee:
         """
         To get trading fee, this function is simplified by using fee override configuration. Most parameters to this
         function are ignore except order_type. Use OrderType.LIMIT_MAKER to specify you want trading fee for
@@ -772,7 +788,7 @@ class GlobitexExchange(ExchangeBase):
                 self.logger().network(
                     "Unknown error. Retrying after 1 seconds.",
                     exc_info=True,
-                    app_warning_msg="Could not fetch user events from Globitex. Check API key and network connection."
+                    app_warning_msg="Could not fetch user events from Globitex. Check API key and network connection.",
                 )
                 await asyncio.sleep(1.0)
 
@@ -805,30 +821,25 @@ class GlobitexExchange(ExchangeBase):
                 await asyncio.sleep(5.0)
 
     async def get_open_orders(self) -> List[OpenOrder]:
-        result = await self._api_request(
-            "post",
-            "private/get-open-orders",
-            {},
-            True
-        )
+        result = await self._api_request("get", "2/trading/orders/active", {"account": self.get_account_id()}, True)
         ret_val = []
-        for order in result["result"]["order_list"]:
-            if globitex_utils.HBOT_BROKER_ID not in order["client_oid"]:
+        for order in result["orders"]:
+            if globitex_utils.HBOT_BROKER_ID not in order["client_oid"]:  # what is this??
                 continue
-            if order["type"] != "LIMIT":
+            if order["type"] != "limit":
                 raise Exception(f"Unsupported order type {order['type']}")
             ret_val.append(
                 OpenOrder(
-                    client_order_id=order["client_oid"],
-                    trading_pair=globitex_utils.convert_from_exchange_trading_pair(order["instrument_name"]),
-                    price=Decimal(str(order["price"])),
-                    amount=Decimal(str(order["quantity"])),
-                    executed_amount=Decimal(str(order["cumulative_quantity"])),
-                    status=order["status"],
+                    client_order_id=order["clientOrderId"],  # check this id
+                    trading_pair=globitex_utils.convert_from_exchange_trading_pair(order["symbol"]),
+                    price=Decimal(str(order["orderPrice"])),
+                    amount=Decimal(str(order["orderQuantity"])),
+                    executed_amount=Decimal(str(order["cumQuantity"])),
+                    # status=order["status"], status not in the API check later
                     order_type=OrderType.LIMIT,
                     is_buy=True if order["side"].lower() == "buy" else False,
-                    time=int(order["create_time"]),
-                    exchange_order_id=order["order_id"]
+                    time=int(order["lastTimestamp"]),  # not sure if is the correct param
+                    exchange_order_id=order["orderId"],
                 )
             )
         return ret_val
