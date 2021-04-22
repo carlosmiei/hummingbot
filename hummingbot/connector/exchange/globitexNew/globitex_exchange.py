@@ -35,20 +35,20 @@ from hummingbot.core.event.events import (
     TradeFee
 )
 from hummingbot.connector.exchange_base import ExchangeBase
-from hummingbot.connector.exchange.crypto_com.crypto_com_order_book_tracker import CryptoComOrderBookTracker
-from hummingbot.connector.exchange.crypto_com.crypto_com_user_stream_tracker import CryptoComUserStreamTracker
-from hummingbot.connector.exchange.crypto_com.crypto_com_auth import CryptoComAuth
-from hummingbot.connector.exchange.crypto_com.crypto_com_in_flight_order import CryptoComInFlightOrder
-from hummingbot.connector.exchange.crypto_com import crypto_com_utils
-from hummingbot.connector.exchange.crypto_com import crypto_com_constants as Constants
+from hummingbot.connector.exchange.globitexNew.globitex_order_book_tracker import GlobitexOrderBookTracker
+from hummingbot.connector.exchange.globitexNew.globitex_user_stream_tracker import GlobitexUserStreamTracker
+from hummingbot.connector.exchange.globitexNew.globitex_auth import GlobitexAuth
+from hummingbot.connector.exchange.globitexNew.globitex_in_flight_order import GlobitexInFlightOrder
+from hummingbot.connector.exchange.globitexNew import globitex_utils
+from hummingbot.connector.exchange.globitexNew import globitex_constants as Constants
 from hummingbot.core.data_type.common import OpenOrder
 ctce_logger = None
 s_decimal_NaN = Decimal("nan")
 
 
-class CryptoComExchange(ExchangeBase):
+class GlobitexExchange(ExchangeBase):
     """
-    CryptoComExchange connects with Crypto.com exchange and provides order book pricing, user account tracking and
+    GlobitexExchange connects with Crypto.com exchange and provides order book pricing, user account tracking and
     trading functionality.
     """
     API_CALL_TIMEOUT = 10.0
@@ -64,28 +64,28 @@ class CryptoComExchange(ExchangeBase):
         return ctce_logger
 
     def __init__(self,
-                 crypto_com_api_key: str,
-                 crypto_com_secret_key: str,
+                 globitex_api_key: str,
+                 globitex_secret_key: str,
                  trading_pairs: Optional[List[str]] = None,
                  trading_required: bool = True
                  ):
         """
-        :param crypto_com_api_key: The API key to connect to private Crypto.com APIs.
-        :param crypto_com_secret_key: The API secret.
+        :param globitex_api_key: The API key to connect to private Crypto.com APIs.
+        :param globitex_secret_key: The API secret.
         :param trading_pairs: The market trading pairs which to track order book data.
         :param trading_required: Whether actual trading is needed.
         """
         super().__init__()
         self._trading_required = trading_required
         self._trading_pairs = trading_pairs
-        self._crypto_com_auth = CryptoComAuth(crypto_com_api_key, crypto_com_secret_key)
-        self._order_book_tracker = CryptoComOrderBookTracker(trading_pairs=trading_pairs)
-        self._user_stream_tracker = CryptoComUserStreamTracker(self._crypto_com_auth, trading_pairs)
+        self._globitex_auth = GlobitexAuth(globitex_api_key, globitex_secret_key)
+        self._order_book_tracker = GlobitexOrderBookTracker(trading_pairs=trading_pairs)
+        self._user_stream_tracker = GlobitexUserStreamTracker(self._globitex_auth, trading_pairs)
         self._ev_loop = asyncio.get_event_loop()
         self._shared_client = None
         self._poll_notifier = asyncio.Event()
         self._last_timestamp = 0
-        self._in_flight_orders = {}  # Dict[client_order_id:str, CryptoComInFlightOrder]
+        self._in_flight_orders = {}  # Dict[client_order_id:str, GlobitexInFlightOrder]
         self._order_not_found_records = {}  # Dict[client_order_id:str, count:int]
         self._trading_rules = {}  # Dict[trading_pair:str, TradingRule]
         self._status_polling_task = None
@@ -95,7 +95,7 @@ class CryptoComExchange(ExchangeBase):
 
     @property
     def name(self) -> str:
-        return "crypto_com"
+        return "globitex"
 
     @property
     def order_books(self) -> Dict[str, OrderBook]:
@@ -106,7 +106,7 @@ class CryptoComExchange(ExchangeBase):
         return self._trading_rules
 
     @property
-    def in_flight_orders(self) -> Dict[str, CryptoComInFlightOrder]:
+    def in_flight_orders(self) -> Dict[str, GlobitexInFlightOrder]:
         return self._in_flight_orders
 
     @property
@@ -155,7 +155,7 @@ class CryptoComExchange(ExchangeBase):
         :param saved_states: The saved tracking_states.
         """
         self._in_flight_orders.update({
-            key: CryptoComInFlightOrder.from_json(value)
+            key: GlobitexInFlightOrder.from_json(value)
             for key, value in saved_states.items()
         })
 
@@ -289,7 +289,7 @@ class CryptoComExchange(ExchangeBase):
         result = {}
         for rule in instruments_info["result"]["instruments"]:
             try:
-                trading_pair = crypto_com_utils.convert_from_exchange_trading_pair(rule["instrument_name"])
+                trading_pair = globitex_utils.convert_from_exchange_trading_pair(rule["instrument_name"])
                 price_decimals = Decimal(str(rule["price_decimals"]))
                 quantity_decimals = Decimal(str(rule["quantity_decimals"]))
                 # E.g. a price decimal of 2 means 0.01 incremental.
@@ -318,11 +318,10 @@ class CryptoComExchange(ExchangeBase):
         url = f"{Constants.REST_URL}/{path_url}"
         client = await self._http_client()
         if is_auth_required:
-            request_id = crypto_com_utils.RequestId.generate_request_id()
+            request_id = globitex_utils.RequestId.generate_request_id()
             data = {"params": params}
-            params = self._crypto_com_auth.generate_auth_dict(path_url, request_id,
-                                                              crypto_com_utils.get_ms_timestamp(), data)
-            headers = self._crypto_com_auth.get_headers()
+            params = self._globitex_auth.generate_auth_dict(path_url, request_id, globitex_utils.get_ms_timestamp(), data)
+            headers = self._globitex_auth.get_headers()
         else:
             headers = {"Content-Type": "application/json"}
 
@@ -377,7 +376,7 @@ class CryptoComExchange(ExchangeBase):
         :param price: The price (note: this is no longer optional)
         :returns A new internal order id
         """
-        order_id: str = crypto_com_utils.get_new_client_order_id(True, trading_pair)
+        order_id: str = globitex_utils.get_new_client_order_id(True, trading_pair)
         safe_ensure_future(self._create_order(TradeType.BUY, order_id, trading_pair, amount, order_type, price))
         return order_id
 
@@ -392,7 +391,7 @@ class CryptoComExchange(ExchangeBase):
         :param price: The price (note: this is no longer optional)
         :returns A new internal order id
         """
-        order_id: str = crypto_com_utils.get_new_client_order_id(False, trading_pair)
+        order_id: str = globitex_utils.get_new_client_order_id(False, trading_pair)
         safe_ensure_future(self._create_order(TradeType.SELL, order_id, trading_pair, amount, order_type, price))
         return order_id
 
@@ -431,7 +430,7 @@ class CryptoComExchange(ExchangeBase):
         if amount < trading_rule.min_order_size:
             raise ValueError(f"Buy order amount {amount} is lower than the minimum order size "
                              f"{trading_rule.min_order_size}.")
-        api_params = {"instrument_name": crypto_com_utils.convert_to_exchange_trading_pair(trading_pair),
+        api_params = {"instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
                       "side": trade_type.name,
                       "type": "LIMIT",
                       "price": f"{price:f}",
@@ -493,7 +492,7 @@ class CryptoComExchange(ExchangeBase):
         """
         Starts tracking an order by simply adding it into _in_flight_orders dictionary.
         """
-        self._in_flight_orders[order_id] = CryptoComInFlightOrder(
+        self._in_flight_orders[order_id] = GlobitexInFlightOrder(
             client_order_id=order_id,
             exchange_order_id=exchange_order_id,
             trading_pair=trading_pair,
@@ -528,7 +527,7 @@ class CryptoComExchange(ExchangeBase):
             await self._api_request(
                 "post",
                 "private/cancel-order",
-                {"instrument_name": crypto_com_utils.convert_to_exchange_trading_pair(trading_pair),
+                {"instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
                  "order_id": ex_order_id},
                 True
             )
@@ -539,7 +538,7 @@ class CryptoComExchange(ExchangeBase):
             self.logger().network(
                 f"Failed to cancel order {order_id}: {str(e)}",
                 exc_info=True,
-                app_warning_msg=f"Failed to cancel the order {order_id} on CryptoCom. "
+                app_warning_msg=f"Failed to cancel the order {order_id} on Globitex. "
                                 f"Check API key and network connection."
             )
 
@@ -573,11 +572,13 @@ class CryptoComExchange(ExchangeBase):
         """
         local_asset_names = set(self._account_balances.keys())
         remote_asset_names = set()
-        account_info = await self._api_request("post", "private/get-account-summary", {}, True)
-        for account in account_info["result"]["accounts"]:
+        account_info = await self._api_request("get", "1/payments/accounts", {}, True)
+        for account in account_info["accounts"]:
             asset_name = account["currency"]
-            self._account_available_balances[asset_name] = Decimal(str(account["available"]))
-            self._account_balances[asset_name] = Decimal(str(account["balance"]))
+            available = Decimal(str(account["available"]))
+            reserved = Decimal(str(account["reserved"]))
+            self._account_available_balances[asset_name] = available
+            self._account_balances[asset_name] = available + reserved
             remote_asset_names.add(asset_name)
 
         asset_names_to_remove = local_asset_names.difference(remote_asset_names)
@@ -597,22 +598,22 @@ class CryptoComExchange(ExchangeBase):
             tasks = []
             for tracked_order in tracked_orders:
                 order_id = await tracked_order.get_exchange_order_id()
-                tasks.append(self._api_request("post",
-                                               "private/get-order-detail",
-                                               {"order_id": order_id},
+                tasks.append(self._api_request("get",
+                                               "1/trading/order",
+                                               {"clientOrderId": order_id, "account": self.get_account_id()},
                                                True))
             self.logger().debug(f"Polling for order status updates of {len(tasks)} orders.")
             responses = await safe_gather(*tasks, return_exceptions=True)
             for response in responses:
                 if isinstance(response, Exception):
                     raise response
-                if "result" not in response:
+                if "orders" not in response:
                     self.logger().info(f"_update_order_status result not in resp: {response}")
                     continue
-                result = response["result"]
-                if "trade_list" in result:
-                    for trade_msg in result["trade_list"]:
-                        await self._process_trade_message(trade_msg)
+                result = response["orders"]
+                # if "trade_list" in result:
+                #     for trade_msg in result["trade_list"]:
+                #         await self._process_trade_message(trade_msg)
                 self._process_order_message(result["order_info"])
 
     def _process_order_message(self, order_msg: Dict[str, Any]):
@@ -620,12 +621,12 @@ class CryptoComExchange(ExchangeBase):
         Updates in-flight order and triggers cancellation or failure event if needed.
         :param order_msg: The order response from either REST or web socket API (they are of the same format)
         """
-        client_order_id = order_msg["client_oid"]
+        client_order_id = order_msg["orderId"]  # check this later, is this or the clientOrderId above??
         if client_order_id not in self._in_flight_orders:
             return
         tracked_order = self._in_flight_orders[client_order_id]
         # Update order execution status
-        tracked_order.last_state = order_msg["status"]
+        tracked_order.last_state = order_msg["orderStatus"]
         if tracked_order.is_cancelled:
             self.logger().info(f"Successfully cancelled order {client_order_id}.")
             self.trigger_event(MarketEvent.OrderCancelled,
@@ -636,7 +637,7 @@ class CryptoComExchange(ExchangeBase):
             self.stop_tracking_order(client_order_id)
         elif tracked_order.is_failure:
             self.logger().info(f"The market order {client_order_id} has failed according to order status API. "
-                               f"Reason: {crypto_com_utils.get_api_reason(order_msg['reason'])}")
+                               f"Reason: {globitex_utils.get_api_reason(order_msg['reason'])}")  # check this we don't have reason on the response
             self.trigger_event(MarketEvent.OrderFailure,
                                MarketOrderFailureEvent(
                                    self.current_timestamp,
@@ -710,7 +711,7 @@ class CryptoComExchange(ExchangeBase):
                 await self._api_request(
                     "post",
                     "private/cancel-all-orders",
-                    {"instrument_name": crypto_com_utils.convert_to_exchange_trading_pair(trading_pair)},
+                    {"instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair)},
                     True
                 )
             open_orders = await self.get_open_orders()
@@ -771,14 +772,14 @@ class CryptoComExchange(ExchangeBase):
                 self.logger().network(
                     "Unknown error. Retrying after 1 seconds.",
                     exc_info=True,
-                    app_warning_msg="Could not fetch user events from CryptoCom. Check API key and network connection."
+                    app_warning_msg="Could not fetch user events from Globitex. Check API key and network connection."
                 )
                 await asyncio.sleep(1.0)
 
     async def _user_stream_event_listener(self):
         """
         Listens to message in _user_stream_tracker.user_stream queue. The messages are put in by
-        CryptoComAPIUserStreamDataSource.
+        GlobitexAPIUserStreamDataSource.
         """
         async for event_message in self._iter_user_event_queue():
             try:
@@ -812,14 +813,14 @@ class CryptoComExchange(ExchangeBase):
         )
         ret_val = []
         for order in result["result"]["order_list"]:
-            if crypto_com_utils.HBOT_BROKER_ID not in order["client_oid"]:
+            if globitex_utils.HBOT_BROKER_ID not in order["client_oid"]:
                 continue
             if order["type"] != "LIMIT":
                 raise Exception(f"Unsupported order type {order['type']}")
             ret_val.append(
                 OpenOrder(
                     client_order_id=order["client_oid"],
-                    trading_pair=crypto_com_utils.convert_from_exchange_trading_pair(order["instrument_name"]),
+                    trading_pair=globitex_utils.convert_from_exchange_trading_pair(order["instrument_name"]),
                     price=Decimal(str(order["price"])),
                     amount=Decimal(str(order["quantity"])),
                     executed_amount=Decimal(str(order["cumulative_quantity"])),
@@ -831,3 +832,7 @@ class CryptoComExchange(ExchangeBase):
                 )
             )
         return ret_val
+
+    async def get_account_id(self) -> str:
+        # dummy for now fill it later
+        return "id"
