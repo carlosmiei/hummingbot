@@ -215,7 +215,7 @@ class GlobitexExchange(ExchangeBase):
         """
         try:
             # since there is no ping endpoint, the lowest rate call is to get BTC-USDT ticker
-            await self._api_request("get", "public/get-ticker?instrument_name=BTC_USDT")
+            await self._api_request("get", "1/public/time")
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -311,6 +311,7 @@ class GlobitexExchange(ExchangeBase):
         :returns A response in json format.
         """
         url = f"{Constants.REST_URL}/{path_url}"
+        print("GLOBITEX API REQUEST:", url)
         client = await self._http_client()
         if is_auth_required:
             request_id = globitex_utils.RequestId.generate_request_id()
