@@ -79,14 +79,14 @@ KEYS = {
     "globitex_api_key": ConfigVar(
         key="globitex_api_key",
         prompt="Enter your Crypto.com API key >>> ",
-        required_if=using_exchange("globitexNew"),
+        required_if=using_exchange("globitex_new"),
         is_secure=True,
         is_connect_key=True,
     ),
     "globitex_secret_key": ConfigVar(
         key="globitex_secret_key",
         prompt="Enter your Crypto.com secret key >>> ",
-        required_if=using_exchange("globitexNew"),
+        required_if=using_exchange("globitex_new"),
         is_secure=True,
         is_connect_key=True,
     ),

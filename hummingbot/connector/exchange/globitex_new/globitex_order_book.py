@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 import logging
-import hummingbot.connector.exchange.globitexNew.globitex_constants as constants
+import hummingbot.connector.exchange.globitex_new.globitex_constants as constants
 
 from sqlalchemy.engine import RowProxy
 from typing import Optional, Dict, List, Any
 from hummingbot.logger import HummingbotLogger
 from hummingbot.core.data_type.order_book import OrderBook
 from hummingbot.core.data_type.order_book_message import OrderBookMessage, OrderBookMessageType
-from hummingbot.connector.exchange.globitexNew.globitex_order_book_message import GlobitexOrderBookMessage
+from hummingbot.connector.exchange.globitex_new.globitex_order_book_message import GlobitexOrderBookMessage
 
 _logger = None
 

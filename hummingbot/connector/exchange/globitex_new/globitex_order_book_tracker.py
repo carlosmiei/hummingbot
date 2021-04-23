@@ -2,7 +2,7 @@
 import asyncio
 import bisect
 import logging
-import hummingbot.connector.exchange.globitexNew.globitex_constants as constants
+import hummingbot.connector.exchange.globitex_new.globitex_constants as constants
 import time
 
 from collections import defaultdict, deque
@@ -10,10 +10,12 @@ from typing import Optional, Dict, List, Deque
 from hummingbot.core.data_type.order_book_message import OrderBookMessageType
 from hummingbot.logger import HummingbotLogger
 from hummingbot.core.data_type.order_book_tracker import OrderBookTracker
-from hummingbot.connector.exchange.globitexNew.globitex_order_book_message import GlobitexOrderBookMessage
-from hummingbot.connector.exchange.globitexNew.globitex_active_order_tracker import GlobitexActiveOrderTracker
-from hummingbot.connector.exchange.globitexNew.globitex_api_order_book_data_source import GlobitexAPIOrderBookDataSource
-from hummingbot.connector.exchange.globitexNew.globitex_order_book import GlobitexOrderBook
+from hummingbot.connector.exchange.globitex_new.globitex_order_book_message import GlobitexOrderBookMessage
+from hummingbot.connector.exchange.globitex_new.globitex_active_order_tracker import GlobitexActiveOrderTracker
+from hummingbot.connector.exchange.globitex_new.globitex_api_order_book_data_source import (
+    GlobitexAPIOrderBookDataSource,
+)
+from hummingbot.connector.exchange.globitex_new.globitex_order_book import GlobitexOrderBook
 
 
 class GlobitexOrderBookTracker(OrderBookTracker):

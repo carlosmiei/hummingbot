@@ -1,6 +1,6 @@
 from hummingbot.core.data_type.order_book import OrderBook
 from hummingbot.core.data_type.order_book_tracker_entry import OrderBookTrackerEntry
-from hummingbot.connector.exchange.globitexNew.globitex_active_order_tracker import GlobitexActiveOrderTracker
+from hummingbot.connector.exchange.globitex_new.globitex_active_order_tracker import GlobitexActiveOrderTracker
 
 
 class GlobitexOrderBookTrackerEntry(OrderBookTrackerEntry):

@@ -35,12 +35,12 @@ from hummingbot.core.event.events import (
     TradeFee,
 )
 from hummingbot.connector.exchange_base import ExchangeBase
-from hummingbot.connector.exchange.globitexNew.globitex_order_book_tracker import GlobitexOrderBookTracker
-from hummingbot.connector.exchange.globitexNew.globitex_user_stream_tracker import GlobitexUserStreamTracker
-from hummingbot.connector.exchange.globitexNew.globitex_auth import GlobitexAuth
-from hummingbot.connector.exchange.globitexNew.globitex_in_flight_order import GlobitexInFlightOrder
-from hummingbot.connector.exchange.globitexNew import globitex_utils
-from hummingbot.connector.exchange.globitexNew import globitex_constants as Constants
+from hummingbot.connector.exchange.globitex_new.globitex_order_book_tracker import GlobitexOrderBookTracker
+from hummingbot.connector.exchange.globitex_new.globitex_user_stream_tracker import GlobitexUserStreamTracker
+from hummingbot.connector.exchange.globitex_new.globitex_auth import GlobitexAuth
+from hummingbot.connector.exchange.globitex_new.globitex_in_flight_order import GlobitexInFlightOrder
+from hummingbot.connector.exchange.globitex_new import globitex_utils
+from hummingbot.connector.exchange.globitex_new import globitex_constants as Constants
 from hummingbot.core.data_type.common import OpenOrder
 
 ctce_logger = None

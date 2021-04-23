@@ -13,11 +13,11 @@ from hummingbot.core.utils.async_utils import (
     safe_ensure_future,
     safe_gather,
 )
-from hummingbot.connector.exchange.globitexNew.globitex_api_user_stream_data_source import (
+from hummingbot.connector.exchange.globitex_new.globitex_api_user_stream_data_source import (
     GlobitexAPIUserStreamDataSource,
 )
-from hummingbot.connector.exchange.globitexNew.globitex_auth import GlobitexAuth
-from hummingbot.connector.exchange.globitexNew.globitex_constants import EXCHANGE_NAME
+from hummingbot.connector.exchange.globitex_new.globitex_auth import GlobitexAuth
+from hummingbot.connector.exchange.globitex_new.globitex_constants import EXCHANGE_NAME
 
 
 class GlobitexUserStreamTracker(UserStreamTracker):
