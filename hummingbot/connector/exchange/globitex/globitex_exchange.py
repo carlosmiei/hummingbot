@@ -325,6 +325,7 @@ class GlobitexExchange(ExchangeBase):
 
         if method == "get":
             response = await client.get(url, headers=headers)
+            print("Response:", response._body)
         elif method == "post":
             post_json = json.dumps(params)
             response = await client.post(url, data=post_json, headers=headers)
@@ -339,8 +340,8 @@ class GlobitexExchange(ExchangeBase):
             raise IOError(
                 f"Error fetching data from {url}. HTTP status is {response.status}. " f"Message: {parsed_response}"
             )
-        if parsed_response["code"] != 0:
-            raise IOError(f"{url} API call failed, response: {parsed_response}")
+        # if parsed_response["code"] != 0:
+        #     raise IOError(f"{url} API call failed, response: {parsed_response}")
         # print(f"REQUEST: {method} {path_url} {params}")
         # print(f"RESPONSE: {parsed_response}")
         return parsed_response
@@ -571,7 +572,7 @@ class GlobitexExchange(ExchangeBase):
         """
         local_asset_names = set(self._account_balances.keys())
         remote_asset_names = set()
-        account_info = await self._api_request("get", "1/payments/accounts", {}, True)
+        account_info = await self._api_request("get", "1/payment/accounts", {}, True)
         for account in account_info["accounts"]:
             asset_name = account["currency"]
             available = Decimal(str(account["available"]))

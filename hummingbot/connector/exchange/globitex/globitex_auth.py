@@ -29,7 +29,8 @@ class GlobitexAuth:
 
         # payload = f"{path_url}{data['id']}" f"{self.api_key}{params}{data['nonce']}"
 
-        message = f"{self.api_key}&{str(nonce)}{path_url}{params}"
+        message = f"{self.api_key}&{str(nonce)}/api/{path_url}{params}"
+        print("Message:", message)
         signed_message = self.sign_message(message)
         headers = self.get_headers(nonce, signed_message)
         # data["sig"] = hmac.new(self.secret_key.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
@@ -50,4 +51,4 @@ class GlobitexAuth:
         }
 
     def sign_message(self, message: str) -> str:
-        return hmac.new(message.encode("utf-8"), self.secret_key.encode("utf-8"), hashlib.sha512).hexdigest()
+        return hmac.new(self.secret_key.encode("utf-8"), message.encode("utf-8"), hashlib.sha512).hexdigest()
