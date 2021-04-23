@@ -11,12 +11,12 @@ from hummingbot.core.data_type.order_book_row import OrderBookRow
 
 _logger = None
 s_empty_diff = np.ndarray(shape=(0, 4), dtype="float64")
-CryptoComOrderBookTrackingDictionary = Dict[Decimal, Dict[str, Dict[str, any]]]
+GlobitexOrderBookTrackingDictionary = Dict[Decimal, Dict[str, Dict[str, any]]]
 
-cdef class CryptoComActiveOrderTracker:
+cdef class GlobitexActiveOrderTracker:
     def __init__(self,
-                 active_asks: CryptoComOrderBookTrackingDictionary = None,
-                 active_bids: CryptoComOrderBookTrackingDictionary = None):
+                 active_asks: GlobitexOrderBookTrackingDictionary = None,
+                 active_bids: GlobitexOrderBookTrackingDictionary = None):
         super().__init__()
         self._active_asks = active_asks or {}
         self._active_bids = active_bids or {}
@@ -29,11 +29,11 @@ cdef class CryptoComActiveOrderTracker:
         return _logger
 
     @property
-    def active_asks(self) -> CryptoComOrderBookTrackingDictionary:
+    def active_asks(self) -> GlobitexOrderBookTrackingDictionary:
         return self._active_asks
 
     @property
-    def active_bids(self) -> CryptoComOrderBookTrackingDictionary:
+    def active_bids(self) -> GlobitexOrderBookTrackingDictionary:
         return self._active_bids
 
     # TODO: research this more

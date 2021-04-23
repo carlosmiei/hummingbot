@@ -13,7 +13,7 @@ from hummingbot.core.data_type.order_book_message import (
 )
 
 
-class CryptoComOrderBookMessage(OrderBookMessage):
+class GlobitexOrderBookMessage(OrderBookMessage):
     def __new__(
         cls,
         message_type: OrderBookMessageType,
@@ -27,7 +27,7 @@ class CryptoComOrderBookMessage(OrderBookMessage):
                 raise ValueError("timestamp must not be None when initializing snapshot messages.")
             timestamp = content["timestamp"]
 
-        return super(CryptoComOrderBookMessage, cls).__new__(
+        return super(GlobitexOrderBookMessage, cls).__new__(
             cls, message_type, content, timestamp=timestamp, *args, **kwargs
         )
 
@@ -55,17 +55,13 @@ class CryptoComOrderBookMessage(OrderBookMessage):
     def asks(self) -> List[OrderBookRow]:
         asks = map(self.content["asks"], lambda ask: {"price": ask[0], "amount": ask[1]})
 
-        return [
-            OrderBookRow(float(price), float(amount), self.update_id) for price, amount in asks
-        ]
+        return [OrderBookRow(float(price), float(amount), self.update_id) for price, amount in asks]
 
     @property
     def bids(self) -> List[OrderBookRow]:
         bids = map(self.content["bids"], lambda bid: {"price": bid[0], "amount": bid[1]})
 
-        return [
-            OrderBookRow(float(price), float(amount), self.update_id) for price, amount in bids
-        ]
+        return [OrderBookRow(float(price), float(amount), self.update_id) for price, amount in bids]
 
     def __eq__(self, other) -> bool:
         return self.type == other.type and self.timestamp == other.timestamp

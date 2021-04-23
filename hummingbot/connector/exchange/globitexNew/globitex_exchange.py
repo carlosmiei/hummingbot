@@ -98,7 +98,7 @@ class GlobitexExchange(ExchangeBase):
 
     @property
     def name(self) -> str:
-        return "globitex"
+        return "globitex_new"
 
     @property
     def order_books(self) -> Dict[str, OrderBook]:
@@ -315,7 +315,7 @@ class GlobitexExchange(ExchangeBase):
         if is_auth_required:
             request_id = globitex_utils.RequestId.generate_request_id()
             data = {"params": params}
-            headers, params = self._globitex_auth.generate_auth_dict(
+            headers, params = self._globitex_auth.generate_auth_tuple(
                 path_url, request_id, globitex_utils.get_ms_timestamp(), data
             )
             # headers = self._globitex_auth.get_headers()

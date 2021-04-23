@@ -22,8 +22,8 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
             cls._logger = logging.getLogger(__name__)
         return cls._logger
 
-    def __init__(self, crypto_com_auth: GlobitexAuth, trading_pairs: Optional[List[str]] = []):
-        self._crypto_com_auth: GlobitexAuth = crypto_com_auth
+    def __init__(self, globitex_auth: GlobitexAuth, trading_pairs: Optional[List[str]] = []):
+        self._globitex_auth: GlobitexAuth = globitex_auth
         self._trading_pairs = trading_pairs
         self._current_listen_key = None
         self._listen_for_user_stream_task = None
@@ -40,14 +40,14 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
         """
 
         try:
-            ws = GlobitexWebsocket(self._crypto_com_auth)
+            ws = GlobitexWebsocket(self._globitex_auth)
             await ws.connect()
             await ws.subscribe(["user.order", "user.trade", "user.balance"])
             async for msg in ws.on_message():
                 # print(f"WS_SOCKET: {msg}")
                 yield msg
                 self._last_recv_time = time.time()
-                if (msg.get("result") is None):
+                if msg.get("result") is None:
                     continue
         except Exception as e:
             raise e
@@ -71,6 +71,7 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
                 raise
             except Exception:
                 self.logger().error(
-                    "Unexpected error with Globitex WebSocket connection. " "Retrying after 30 seconds...", exc_info=True
+                    "Unexpected error with Globitex WebSocket connection. " "Retrying after 30 seconds...",
+                    exc_info=True,
                 )
                 await asyncio.sleep(30.0)

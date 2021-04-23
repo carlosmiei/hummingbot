@@ -4,15 +4,15 @@ import copy
 import logging
 import websockets
 import ujson
-import hummingbot.connector.exchange.crypto_com.crypto_com_constants as constants
+import hummingbot.connector.exchange.globitexNew.globitex_constants as constants
 from hummingbot.core.utils.async_utils import safe_ensure_future
 
 
 from typing import Optional, AsyncIterable, Any, List
 from websockets.exceptions import ConnectionClosed
 from hummingbot.logger import HummingbotLogger
-from hummingbot.connector.exchange.crypto_com.crypto_com_auth import GlobitexAuth
-from hummingbot.connector.exchange.crypto_com.crypto_com_utils import RequestId, get_ms_timestamp
+from hummingbot.connector.exchange.globitexNew.globitex_auth import GlobitexAuth
+from hummingbot.connector.exchange.globitexNew.globitex_utils import RequestId, get_ms_timestamp
 
 # reusable websocket class
 # ToDo: We should eventually remove this class, and instantiate web socket connection normally (see Binance for example)
@@ -92,12 +92,7 @@ class GlobitexWebsocket(RequestId):
         }
 
         if self._isPrivate:
-            auth = self._auth.generate_auth_dict(
-                method,
-                request_id=id,
-                nonce=nonce,
-                data=data,
-            )
+            auth = self._auth.generate_auth_tuple(method, request_id=id, nonce=nonce, data=data,)
 
             payload["sig"] = auth["sig"]
             payload["api_key"] = auth["api_key"]
@@ -112,15 +107,11 @@ class GlobitexWebsocket(RequestId):
 
     # subscribe to a method
     async def subscribe(self, channels: List[str]) -> int:
-        return await self.request("subscribe", {
-            "channels": channels
-        })
+        return await self.request("subscribe", {"channels": channels})
 
     # unsubscribe to a method
     async def unsubscribe(self, channels: List[str]) -> int:
-        return await self.request("unsubscribe", {
-            "channels": channels
-        })
+        return await self.request("unsubscribe", {"channels": channels})
 
     # listen to messages by method
     async def on_message(self) -> AsyncIterable[Any]:

@@ -4,7 +4,7 @@ import logging
 import time
 import aiohttp
 import pandas as pd
-import hummingbot.connector.exchange.globitex.globitex_constants as constants
+import hummingbot.connector.exchange.globitexNew.globitex_constants as constants
 
 from typing import Optional, List, Dict, Any
 from hummingbot.core.data_type.order_book import OrderBook
@@ -44,8 +44,11 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
             resp = await client.get(f"{constants.REST_URL}/public/get-ticker")
             resp_json = await resp.json()
             for t_pair in trading_pairs:
-                last_trade = [o["a"] for o in resp_json["result"]["data"] if o["i"] ==
-                              globitex_utils.convert_to_exchange_trading_pair(t_pair)]
+                last_trade = [
+                    o["a"]
+                    for o in resp_json["result"]["data"]
+                    if o["i"] == globitex_utils.convert_to_exchange_trading_pair(t_pair)
+                ]
                 if last_trade and last_trade[0] is not None:
                     result[t_pair] = last_trade[0]
         return result
@@ -55,8 +58,10 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
         async with aiohttp.ClientSession() as client:
             async with client.get(f"{constants.REST_URL}/public/get-ticker", timeout=10) as response:
                 if response.status == 200:
-                    from hummingbot.connector.exchange.globitex.globitex_utils import \
-                        convert_from_exchange_trading_pair
+                    from hummingbot.connector.exchange.globitexNew.globitex_utils import (
+                        convert_from_exchange_trading_pair,
+                    )
+
                     try:
                         data: Dict[str, Any] = await response.json()
                         return [convert_from_exchange_trading_pair(item["i"]) for item in data["result"]["data"]]
@@ -91,9 +96,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
         snapshot: Dict[str, Any] = await self.get_order_book_data(trading_pair)
         snapshot_timestamp: float = time.time()
         snapshot_msg: OrderBookMessage = GlobitexOrderBook.snapshot_message_from_exchange(
-            snapshot,
-            snapshot_timestamp,
-            metadata={"trading_pair": trading_pair}
+            snapshot, snapshot_timestamp, metadata={"trading_pair": trading_pair}
         )
         order_book = self.order_book_create_function()
         active_order_tracker: GlobitexActiveOrderTracker = GlobitexActiveOrderTracker()
@@ -110,10 +113,14 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 ws = GlobitexWebsocket()
                 await ws.connect()
 
-                await ws.subscribe(list(map(
-                    lambda pair: f"trade.{globitex_utils.convert_to_exchange_trading_pair(pair)}",
-                    self._trading_pairs
-                )))
+                await ws.subscribe(
+                    list(
+                        map(
+                            lambda pair: f"trade.{globitex_utils.convert_to_exchange_trading_pair(pair)}",
+                            self._trading_pairs,
+                        )
+                    )
+                )
 
                 async for response in ws.on_message():
                     if response.get("result") is None:
@@ -125,7 +132,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                         trade_msg: OrderBookMessage = GlobitexOrderBook.trade_message_from_exchange(
                             trade,
                             trade_timestamp,
-                            metadata={"trading_pair": globitex_utils.convert_from_exchange_trading_pair(trade["i"])}
+                            metadata={"trading_pair": globitex_utils.convert_from_exchange_trading_pair(trade["i"])},
                         )
                         output.put_nowait(trade_msg)
 
@@ -146,10 +153,14 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 ws = GlobitexWebsocket()
                 await ws.connect()
 
-                await ws.subscribe(list(map(
-                    lambda pair: f"book.{globitex_utils.convert_to_exchange_trading_pair(pair)}.150",
-                    self._trading_pairs
-                )))
+                await ws.subscribe(
+                    list(
+                        map(
+                            lambda pair: f"book.{globitex_utils.convert_to_exchange_trading_pair(pair)}.150",
+                            self._trading_pairs,
+                        )
+                    )
+                )
 
                 async for response in ws.on_message():
                     if response.get("result") is None:
@@ -163,8 +174,11 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                     orderbook_msg: OrderBookMessage = GlobitexOrderBook.snapshot_message_from_exchange(
                         order_book_data,
                         timestamp,
-                        metadata={"trading_pair": globitex_utils.convert_from_exchange_trading_pair(
-                            response["result"]["instrument_name"])}
+                        metadata={
+                            "trading_pair": globitex_utils.convert_from_exchange_trading_pair(
+                                response["result"]["instrument_name"]
+                            )
+                        },
                     )
                     output.put_nowait(orderbook_msg)
 
@@ -175,7 +189,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                     "Unexpected error with WebSocket connection.",
                     exc_info=True,
                     app_warning_msg="Unexpected error with WebSocket connection. Retrying in 30 seconds. "
-                                    "Check network connection."
+                    "Check network connection.",
                 )
                 await asyncio.sleep(30.0)
             finally:
@@ -192,9 +206,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                         snapshot: Dict[str, any] = await self.get_order_book_data(trading_pair)
                         snapshot_timestamp: int = ms_timestamp_to_s(snapshot["t"])
                         snapshot_msg: OrderBookMessage = GlobitexOrderBook.snapshot_message_from_exchange(
-                            snapshot,
-                            snapshot_timestamp,
-                            metadata={"trading_pair": trading_pair}
+                            snapshot, snapshot_timestamp, metadata={"trading_pair": trading_pair}
                         )
                         output.put_nowait(snapshot_msg)
                         self.logger().debug(f"Saved order book snapshot for {trading_pair}")
@@ -207,7 +219,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                             "Unexpected error with WebSocket connection.",
                             exc_info=True,
                             app_warning_msg="Unexpected error with WebSocket connection. Retrying in 5 seconds. "
-                                            "Check network connection."
+                            "Check network connection.",
                         )
                         await asyncio.sleep(5.0)
                 this_hour: pd.Timestamp = pd.Timestamp.utcnow().replace(minute=0, second=0, microsecond=0)

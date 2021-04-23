@@ -8,7 +8,7 @@ import os
 import subprocess
 import sys
 
-is_posix = (os.name == "posix")
+is_posix = os.name == "posix"
 
 if is_posix:
     os_name = subprocess.check_output("uname").decode("utf8")
@@ -23,8 +23,8 @@ if is_posix:
 # for C/ObjC but not for C++
 class BuildExt(build_ext):
     def build_extensions(self):
-        if os.name != "nt" and '-Wstrict-prototypes' in self.compiler.compiler_so:
-            self.compiler.compiler_so.remove('-Wstrict-prototypes')
+        if os.name != "nt" and "-Wstrict-prototypes" in self.compiler.compiler_so:
+            self.compiler.compiler_so.remove("-Wstrict-prototypes")
         super().build_extensions()
 
 
@@ -71,6 +71,7 @@ def main():
         "hummingbot.connector.exchange.eterbase",
         "hummingbot.connector.exchange.beaxy",
         "hummingbot.connector.exchange.hitbtc",
+        "hummingbot.connector.exchange.globitex_new",
         "hummingbot.connector.derivative",
         "hummingbot.connector.derivative.binance_perpetual",
         "hummingbot.script",
@@ -97,7 +98,7 @@ def main():
             "wallet/ethereum/erc20_tokens.json",
             "wallet/ethereum/erc20_tokens_kovan.json",
             "VERSION",
-            "templates/*TEMPLATE.yml"
+            "templates/*TEMPLATE.yml",
         ],
     }
     install_requires = [
@@ -154,34 +155,28 @@ def main():
 
     if "DEV_MODE" in os.environ:
         version += ".dev1"
-        package_data[""] = [
-            "*.pxd", "*.pyx", "*.h"
-        ]
+        package_data[""] = ["*.pxd", "*.pyx", "*.h"]
         package_data["hummingbot"].append("core/cpp/*.cpp")
 
     if len(sys.argv) > 1 and sys.argv[1] == "build_ext" and is_posix:
         sys.argv.append(f"--parallel={cpu_count}")
 
-    setup(name="hummingbot",
-          version=version,
-          description="Hummingbot",
-          url="https://github.com/CoinAlpha/hummingbot",
-          author="CoinAlpha, Inc.",
-          author_email="dev@hummingbot.io",
-          license="Apache 2.0",
-          packages=packages,
-          package_data=package_data,
-          install_requires=install_requires,
-          ext_modules=cythonize(["hummingbot/**/*.pyx"], **cython_kwargs),
-          include_dirs=[
-              np.get_include()
-          ],
-          scripts=[
-              "bin/hummingbot.py",
-              "bin/hummingbot_quickstart.py"
-          ],
-          cmdclass={'build_ext': BuildExt},
-          )
+    setup(
+        name="hummingbot",
+        version=version,
+        description="Hummingbot",
+        url="https://github.com/CoinAlpha/hummingbot",
+        author="CoinAlpha, Inc.",
+        author_email="dev@hummingbot.io",
+        license="Apache 2.0",
+        packages=packages,
+        package_data=package_data,
+        install_requires=install_requires,
+        ext_modules=cythonize(["hummingbot/**/*.pyx"], **cython_kwargs),
+        include_dirs=[np.get_include()],
+        scripts=["bin/hummingbot.py", "bin/hummingbot_quickstart.py"],
+        cmdclass={"build_ext": BuildExt},
+    )
 
 
 if __name__ == "__main__":
