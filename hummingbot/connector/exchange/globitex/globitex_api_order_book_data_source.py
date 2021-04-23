@@ -4,7 +4,7 @@ import logging
 import time
 import aiohttp
 import pandas as pd
-import hummingbot.connector.exchange.globitex_new.globitex_constants as constants
+import hummingbot.connector.exchange.globitex.globitex_constants as constants
 
 from typing import Optional, List, Dict, Any
 from hummingbot.core.data_type.order_book import OrderBook
@@ -58,9 +58,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
         async with aiohttp.ClientSession() as client:
             async with client.get(f"{constants.REST_URL}/public/get-ticker", timeout=10) as response:
                 if response.status == 200:
-                    from hummingbot.connector.exchange.globitex_new.globitex_utils import (
-                        convert_from_exchange_trading_pair,
-                    )
+                    from hummingbot.connector.exchange.globitex.globitex_utils import convert_from_exchange_trading_pair
 
                     try:
                         data: Dict[str, Any] = await response.json()
@@ -170,7 +168,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                     timestamp: int = ms_timestamp_to_s(order_book_data["t"])
                     # data in this channel is not order book diff but the entire order book (up to depth 150).
                     # so we need to convert it into a order book snapshot.
-                    # Crypto.com does not offer order book diff ws updates.
+                    # Globitex does not offer order book diff ws updates.
                     orderbook_msg: OrderBookMessage = GlobitexOrderBook.snapshot_message_from_exchange(
                         order_book_data,
                         timestamp,

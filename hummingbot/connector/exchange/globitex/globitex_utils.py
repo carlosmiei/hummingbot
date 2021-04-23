@@ -78,15 +78,15 @@ def get_api_reason(code: str) -> str:
 KEYS = {
     "globitex_api_key": ConfigVar(
         key="globitex_api_key",
-        prompt="Enter your Crypto.com API key >>> ",
-        required_if=using_exchange("globitex_new"),
+        prompt="Enter your Globitex API key >>> ",
+        required_if=using_exchange("globitex"),
         is_secure=True,
         is_connect_key=True,
     ),
     "globitex_secret_key": ConfigVar(
         key="globitex_secret_key",
-        prompt="Enter your Crypto.com secret key >>> ",
-        required_if=using_exchange("globitex_new"),
+        prompt="Enter your Globitex secret key >>> ",
+        required_if=using_exchange("globitex"),
         is_secure=True,
         is_connect_key=True,
     ),

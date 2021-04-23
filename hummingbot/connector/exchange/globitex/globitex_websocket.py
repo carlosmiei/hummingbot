@@ -4,15 +4,15 @@ import copy
 import logging
 import websockets
 import ujson
-import hummingbot.connector.exchange.globitex_new.globitex_constants as constants
+import hummingbot.connector.exchange.globitex.globitex_constants as constants
 from hummingbot.core.utils.async_utils import safe_ensure_future
 
 
 from typing import Optional, AsyncIterable, Any, List
 from websockets.exceptions import ConnectionClosed
 from hummingbot.logger import HummingbotLogger
-from hummingbot.connector.exchange.globitex_new.globitex_auth import GlobitexAuth
-from hummingbot.connector.exchange.globitex_new.globitex_utils import RequestId, get_ms_timestamp
+from hummingbot.connector.exchange.globitex.globitex_auth import GlobitexAuth
+from hummingbot.connector.exchange.globitex.globitex_utils import RequestId, get_ms_timestamp
 
 # reusable websocket class
 # ToDo: We should eventually remove this class, and instantiate web socket connection normally (see Binance for example)

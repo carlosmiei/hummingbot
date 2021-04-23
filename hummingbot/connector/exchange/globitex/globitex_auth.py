@@ -29,9 +29,9 @@ class GlobitexAuth:
 
         # payload = f"{path_url}{data['id']}" f"{self.api_key}{params}{data['nonce']}"
 
-        message = f"{self.api_key}&{nonce}{path_url}{params}"
+        message = f"{self.api_key}&{str(nonce)}{path_url}{params}"
         signed_message = self.sign_message(message)
-        headers = self.get_headers(signed_message)
+        headers = self.get_headers(nonce, signed_message)
         # data["sig"] = hmac.new(self.secret_key.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
 
         return headers, data
@@ -45,7 +45,7 @@ class GlobitexAuth:
         return {
             "Content-Type": "application/x-www-form-urlencoded",
             "X-API-Key": self.api_key,
-            "X-Nonce": nonce,
+            "X-Nonce": str(nonce),
             "X-Signature": signed_message,
         }
 

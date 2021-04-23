@@ -35,12 +35,12 @@ from hummingbot.core.event.events import (
     TradeFee,
 )
 from hummingbot.connector.exchange_base import ExchangeBase
-from hummingbot.connector.exchange.globitex_new.globitex_order_book_tracker import GlobitexOrderBookTracker
-from hummingbot.connector.exchange.globitex_new.globitex_user_stream_tracker import GlobitexUserStreamTracker
-from hummingbot.connector.exchange.globitex_new.globitex_auth import GlobitexAuth
-from hummingbot.connector.exchange.globitex_new.globitex_in_flight_order import GlobitexInFlightOrder
-from hummingbot.connector.exchange.globitex_new import globitex_utils
-from hummingbot.connector.exchange.globitex_new import globitex_constants as Constants
+from hummingbot.connector.exchange.globitex.globitex_order_book_tracker import GlobitexOrderBookTracker
+from hummingbot.connector.exchange.globitex.globitex_user_stream_tracker import GlobitexUserStreamTracker
+from hummingbot.connector.exchange.globitex.globitex_auth import GlobitexAuth
+from hummingbot.connector.exchange.globitex.globitex_in_flight_order import GlobitexInFlightOrder
+from hummingbot.connector.exchange.globitex import globitex_utils
+from hummingbot.connector.exchange.globitex import globitex_constants as Constants
 from hummingbot.core.data_type.common import OpenOrder
 
 ctce_logger = None
@@ -49,7 +49,7 @@ s_decimal_NaN = Decimal("nan")
 
 class GlobitexExchange(ExchangeBase):
     """
-    GlobitexExchange connects with Crypto.com exchange and provides order book pricing, user account tracking and
+    GlobitexExchange connects with Globitex exchange and provides order book pricing, user account tracking and
     trading functionality.
     """
 
@@ -73,7 +73,7 @@ class GlobitexExchange(ExchangeBase):
         trading_required: bool = True,
     ):
         """
-        :param globitex_api_key: The API key to connect to private Crypto.com APIs.
+        :param globitex_api_key: The API key to connect to private Globitex APIs.
         :param globitex_secret_key: The API secret.
         :param trading_pairs: The market trading pairs which to track order book data.
         :param trading_required: Whether actual trading is needed.
@@ -98,7 +98,7 @@ class GlobitexExchange(ExchangeBase):
 
     @property
     def name(self) -> str:
-        return "globitex_new"
+        return "globitex"
 
     @property
     def order_books(self) -> Dict[str, OrderBook]:
@@ -244,7 +244,7 @@ class GlobitexExchange(ExchangeBase):
                 self.logger().network(
                     f"Unexpected error while fetching trading rules. Error: {str(e)}",
                     exc_info=True,
-                    app_warning_msg="Could not fetch new trading rules from Crypto.com. " "Check network connection.",
+                    app_warning_msg="Could not fetch new trading rules from Globitex. " "Check network connection.",
                 )
                 await asyncio.sleep(0.5)
 
@@ -465,7 +465,7 @@ class GlobitexExchange(ExchangeBase):
         except Exception as e:
             self.stop_tracking_order(order_id)
             self.logger().network(
-                f"Error submitting {trade_type.name} {order_type.name} order to Crypto.com for "
+                f"Error submitting {trade_type.name} {order_type.name} order to Globitex for "
                 f"{amount} {trading_pair} "
                 f"{price}.",
                 exc_info=True,
@@ -560,7 +560,7 @@ class GlobitexExchange(ExchangeBase):
                 self.logger().network(
                     "Unexpected error while fetching account updates.",
                     exc_info=True,
-                    app_warning_msg="Could not fetch account updates from Crypto.com. "
+                    app_warning_msg="Could not fetch account updates from Globitex. "
                     "Check API key and network connection.",
                 )
                 await asyncio.sleep(0.5)
@@ -740,7 +740,7 @@ class GlobitexExchange(ExchangeBase):
             self.logger().network(
                 "Failed to cancel all orders.",
                 exc_info=True,
-                app_warning_msg="Failed to cancel all orders on Crypto.com. Check API key and network connection.",
+                app_warning_msg="Failed to cancel all orders on Globitex. Check API key and network connection.",
             )
         return cancellation_results
 
