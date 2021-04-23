@@ -311,7 +311,6 @@ class GlobitexExchange(ExchangeBase):
         :returns A response in json format.
         """
         url = f"{Constants.REST_URL}/{path_url}"
-        print("GLOBITEX API REQUEST:", url)
         client = await self._http_client()
         if is_auth_required:
             request_id = globitex_utils.RequestId.generate_request_id()
@@ -573,7 +572,9 @@ class GlobitexExchange(ExchangeBase):
         local_asset_names = set(self._account_balances.keys())
         remote_asset_names = set()
         account_info = await self._api_request("get", "1/payment/accounts", {}, True)
-        for account in account_info["accounts"]:
+        # multi account not supported for now
+        balances = account_info["accounts"][0]["balance"]
+        for account in balances:
             asset_name = account["currency"]
             available = Decimal(str(account["available"]))
             reserved = Decimal(str(account["reserved"]))
