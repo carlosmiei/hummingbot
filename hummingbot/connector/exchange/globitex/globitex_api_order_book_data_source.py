@@ -43,6 +43,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
         async with aiohttp.ClientSession() as client:
             resp = await client.get(f"{constants.REST_URL}/1/public/ticker")
             resp_json = await resp.json()
+            resp_json = resp_json["instruments"]
             for trading_pair in trading_pairs:
                 resp_record = [
                     o for o in resp_json if o["symbol"] == globitex_utils.convert_to_exchange_trading_pair(trading_pair)
@@ -55,14 +56,11 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
         async with aiohttp.ClientSession() as client:
             async with client.get(f"{constants.REST_URL}/1/public/ticker", timeout=10) as response:
                 if response.status == 200:
-                    from hummingbot.connector.exchange.globitex.globitex_utils import convert_from_exchange_trading_pair
-
-                    try:
-                        data: Dict[str, Any] = await response.json()
-                        return [convert_from_exchange_trading_pair(item["i"]) for item in data["instruments"]]
-                    except Exception:
-                        pass
-                        # Do nothing if the request fails -- there will be no autocomplete for kucoin trading pairs
+                    resp_json: Dict[str, Any] = await response.json()
+                    return [
+                        globitex_utils.convert_from_exchange_trading_pair(market["symbol"])
+                        for market in resp_json["instruments"]
+                    ]
                 return []
 
     @staticmethod
