@@ -59,11 +59,12 @@ class RequestId:
 
 
 def convert_from_exchange_trading_pair(exchange_trading_pair: str) -> str:
-    return exchange_trading_pair.replace("_", "-")
+    #  return exchange_trading_pair.replace("_", "-")
+    return exchange_trading_pair[:3] + "-" + exchange_trading_pair[3:]
 
 
 def convert_to_exchange_trading_pair(hb_trading_pair: str) -> str:
-    return hb_trading_pair.replace("-", "_")
+    return hb_trading_pair.replace("-", "")
 
 
 def get_new_client_order_id(is_buy: bool, trading_pair: str) -> str:

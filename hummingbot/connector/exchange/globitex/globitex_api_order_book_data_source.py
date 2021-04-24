@@ -39,30 +39,27 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
 
     @classmethod
     async def get_last_traded_prices(cls, trading_pairs: List[str]) -> Dict[str, float]:
-        result = {}
+        results = dict()
         async with aiohttp.ClientSession() as client:
-            resp = await client.get(f"{constants.REST_URL}/public/get-ticker")
+            resp = await client.get(f"{constants.REST_URL}/1/public/ticker")
             resp_json = await resp.json()
-            for t_pair in trading_pairs:
-                last_trade = [
-                    o["a"]
-                    for o in resp_json["result"]["data"]
-                    if o["i"] == globitex_utils.convert_to_exchange_trading_pair(t_pair)
-                ]
-                if last_trade and last_trade[0] is not None:
-                    result[t_pair] = last_trade[0]
-        return result
+            for trading_pair in trading_pairs:
+                resp_record = [
+                    o for o in resp_json if o["symbol"] == globitex_utils.convert_to_exchange_trading_pair(trading_pair)
+                ][0]
+                results[trading_pair] = float(resp_record["last"])  # is this the price?
+        return results
 
     @staticmethod
     async def fetch_trading_pairs() -> List[str]:
         async with aiohttp.ClientSession() as client:
-            async with client.get(f"{constants.REST_URL}/public/get-ticker", timeout=10) as response:
+            async with client.get(f"{constants.REST_URL}/1/public/ticker", timeout=10) as response:
                 if response.status == 200:
                     from hummingbot.connector.exchange.globitex.globitex_utils import convert_from_exchange_trading_pair
 
                     try:
                         data: Dict[str, Any] = await response.json()
-                        return [convert_from_exchange_trading_pair(item["i"]) for item in data["result"]["data"]]
+                        return [convert_from_exchange_trading_pair(item["i"]) for item in data["instruments"]]
                     except Exception:
                         pass
                         # Do nothing if the request fails -- there will be no autocomplete for kucoin trading pairs
