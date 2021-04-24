@@ -70,7 +70,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
         """
         async with aiohttp.ClientSession() as client:
             orderbook_response = await client.get(
-                f"{constants.REST_URL}/public/get-book?depth=150&instrument_name="
+                f"{constants.REST_URL}/1/public/orderbook/"
                 f"{globitex_utils.convert_to_exchange_trading_pair(trading_pair)}"
             )
 
@@ -81,7 +81,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 )
 
             orderbook_data: List[Dict[str, Any]] = await safe_gather(orderbook_response.json())
-            orderbook_data = orderbook_data[0]["result"]["data"][0]
+            orderbook_data = orderbook_data[0]  # ["result"]["data"][0]
 
         return orderbook_data
 
