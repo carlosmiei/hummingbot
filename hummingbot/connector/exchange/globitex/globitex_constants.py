@@ -6,7 +6,7 @@ REST_URL = "https://api.globitex.com/api"
 # WSS_PRIVATE_URL = "wss://stream.Globitex/v2/user"
 WSS_PRIVATE_URL = "wss://d289dek49b4wqs.cloudfront.net/v2/user"
 # WSS_PUBLIC_URL = "wss://stream.Globitex/v2/market"
-WSS_PUBLIC_URL = "wss://d10tq1f9ygdz7y.cloudfront.net/v2/market"
+WSS_PUBLIC_URL = "wss://stream.globitex.com/market-data"
 
 API_REASONS = {
     0: "Success",
