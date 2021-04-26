@@ -107,7 +107,7 @@ class GlobitexWebsocket(RequestId):
 
     # subscribe to a method
     async def subscribe(self, channels: List[str]) -> int:
-        return await self.request("subscribe", {"channels": channels})
+        return await self.request("subscribe")  # , {"channels": channels})
 
     # unsubscribe to a method
     async def unsubscribe(self, channels: List[str]) -> int:

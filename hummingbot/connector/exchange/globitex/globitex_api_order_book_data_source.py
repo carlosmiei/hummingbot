@@ -100,6 +100,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
     async def listen_for_trades(self, ev_loop: asyncio.BaseEventLoop, output: asyncio.Queue):
         """
         Listen for trades using websocket trade channel
+        Globitex does not support WS? maybe supports w8
         """
         while True:
             try:
@@ -107,25 +108,27 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 await ws.connect()
 
                 await ws.subscribe(
-                    list(
-                        map(
-                            lambda pair: f"trade.{globitex_utils.convert_to_exchange_trading_pair(pair)}",
-                            self._trading_pairs,
-                        )
-                    )
+                    # list(
+                    #     map(
+                    #         lambda pair: f"trade.{globitex_utils.convert_to_exchange_trading_pair(pair)}",
+                    #         self._trading_pairs,
+                    #     )
+                    # )
                 )
 
                 async for response in ws.on_message():
-                    if response.get("result") is None:
-                        continue
-
-                    for trade in response["result"]["data"]:
+                    # if response.get("result") is None:
+                    #     continue
+                    response = response["MarketDataIncrementalRefresh"]
+                    for trade in response["trade"]:
                         trade: Dict[Any] = trade
-                        trade_timestamp: int = ms_timestamp_to_s(trade["t"])
+                        trade_timestamp: int = ms_timestamp_to_s(trade["timestamp"])
                         trade_msg: OrderBookMessage = GlobitexOrderBook.trade_message_from_exchange(
                             trade,
                             trade_timestamp,
-                            metadata={"trading_pair": globitex_utils.convert_from_exchange_trading_pair(trade["i"])},
+                            metadata={
+                                "trading_pair": globitex_utils.convert_from_exchange_trading_pair(response["symbol"])
+                            },
                         )
                         output.put_nowait(trade_msg)
 
