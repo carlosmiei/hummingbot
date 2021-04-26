@@ -100,7 +100,6 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
     async def listen_for_trades(self, ev_loop: asyncio.BaseEventLoop, output: asyncio.Queue):
         """
         Listen for trades using websocket trade channel
-        Globitex does not support WS? maybe supports w8
         """
         while True:
             try:
@@ -150,20 +149,20 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 await ws.connect()
 
                 await ws.subscribe(
-                    list(
-                        map(
-                            lambda pair: f"book.{globitex_utils.convert_to_exchange_trading_pair(pair)}.150",
-                            self._trading_pairs,
-                        )
-                    )
+                    # list(
+                    #     map(
+                    #         lambda pair: f"book.{globitex_utils.convert_to_exchange_trading_pair(pair)}.150",
+                    #         self._trading_pairs,
+                    #     )
+                    # )
                 )
 
                 async for response in ws.on_message():
                     # if response.get("result") is None:
                     #     continue
-
+                    response = response["MarketDataIncrementalRefresh"]
                     order_book_data = response[0]  # ["result"]["data"][0]
-                    timestamp: int = ms_timestamp_to_s(order_book_data["t"])
+                    timestamp: int = ms_timestamp_to_s(response["timestamp"])
                     # data in this channel is not order book diff but the entire order book (up to depth 150).
                     # so we need to convert it into a order book snapshot.
                     # Globitex does not offer order book diff ws updates.
@@ -171,9 +170,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                         order_book_data,
                         timestamp,
                         metadata={
-                            "trading_pair": globitex_utils.convert_from_exchange_trading_pair(
-                                response["result"]["instrument_name"]
-                            )
+                            "trading_pair": globitex_utils.convert_from_exchange_trading_pair(response["symbol"])
                         },
                     )
                     output.put_nowait(orderbook_msg)
@@ -200,7 +197,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 for trading_pair in self._trading_pairs:
                     try:
                         snapshot: Dict[str, any] = await self.get_order_book_data(trading_pair)
-                        snapshot_timestamp: int = ms_timestamp_to_s(snapshot["t"])
+                        snapshot_timestamp: int = ms_timestamp_to_s(snapshot["timestamp"])
                         snapshot_msg: OrderBookMessage = GlobitexOrderBook.snapshot_message_from_exchange(
                             snapshot, snapshot_timestamp, metadata={"trading_pair": trading_pair}
                         )
