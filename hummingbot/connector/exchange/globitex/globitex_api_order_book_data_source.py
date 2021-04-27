@@ -187,7 +187,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 for trading_pair in self._trading_pairs:
                     try:
                         snapshot: Dict[str, any] = await self.get_order_book_data(trading_pair)
-                        snapshot_timestamp: int = ms_timestamp_to_s(snapshot["timestamp"])
+                        snapshot_timestamp: float = time.time()
                         snapshot_msg: OrderBookMessage = GlobitexOrderBook.snapshot_message_from_exchange(
                             snapshot, snapshot_timestamp, metadata={"trading_pair": trading_pair}
                         )
