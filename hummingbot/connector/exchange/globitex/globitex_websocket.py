@@ -5,7 +5,8 @@ import logging
 import websockets
 import ujson
 import hummingbot.connector.exchange.globitex.globitex_constants as constants
-from hummingbot.core.utils.async_utils import safe_ensure_future
+
+# from hummingbot.core.utils.async_utils import safe_ensure_future
 
 
 from typing import Optional, AsyncIterable, Any, List
@@ -42,11 +43,10 @@ class GlobitexWebsocket(RequestId):
 
             # if auth class was passed into websocket class
             # we need to emit authenticated requests
-            if self._isPrivate:
-                await self._emit("public/auth", None)
-                # TODO: wait for response
-                await asyncio.sleep(1)
-
+            # if self._isPrivate:
+            #     await self._emit("public/auth", None)
+            #     # TODO: wait for response
+            #     await asyncio.sleep(1)
             return self._client
         except Exception as e:
             self.logger().error(f"Websocket error: '{str(e)}'", exc_info=True)
@@ -65,9 +65,9 @@ class GlobitexWebsocket(RequestId):
                 try:
                     raw_msg_str: str = await asyncio.wait_for(self._client.recv(), timeout=self.MESSAGE_TIMEOUT)
                     raw_msg = ujson.loads(raw_msg_str)
-                    if "method" in raw_msg and raw_msg["method"] == "public/heartbeat":
-                        payload = {"id": raw_msg["id"], "method": "public/respond-heartbeat"}
-                        safe_ensure_future(self._client.send(ujson.dumps(payload)))
+                    # if "method" in raw_msg and raw_msg["method"] == "public/heartbeat":
+                    #     payload = {"id": raw_msg["id"], "method": "public/respond-heartbeat"}
+                    #     safe_ensure_future(self._client.send(ujson.dumps(payload)))
                     yield raw_msg
                 except asyncio.TimeoutError:
                     await asyncio.wait_for(self._client.ping(), timeout=self.PING_TIMEOUT)
@@ -106,7 +106,7 @@ class GlobitexWebsocket(RequestId):
         return await self._emit(method, data)
 
     # subscribe to a method
-    async def subscribe(self, channels: List[str]) -> int:
+    async def subscribe(self, channels: List[str] = None) -> int:
         return await self.request("subscribe")  # , {"channels": channels})
 
     # unsubscribe to a method

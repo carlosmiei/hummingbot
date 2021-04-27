@@ -106,18 +106,9 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 ws = GlobitexWebsocket()
                 await ws.connect()
 
-                await ws.subscribe(
-                    # list(
-                    #     map(
-                    #         lambda pair: f"trade.{globitex_utils.convert_to_exchange_trading_pair(pair)}",
-                    #         self._trading_pairs,
-                    #     )
-                    # )
-                )
-
                 async for response in ws.on_message():
-                    # if response.get("result") is None:
-                    #     continue
+                    if response.get("MarketDataIncrementalRefresh") is None:
+                        continue
                     response = response["MarketDataIncrementalRefresh"]
                     for trade in response["trade"]:
                         trade: Dict[Any] = trade
@@ -148,24 +139,23 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 ws = GlobitexWebsocket()
                 await ws.connect()
 
-                await ws.subscribe(
-                    # list(
-                    #     map(
-                    #         lambda pair: f"book.{globitex_utils.convert_to_exchange_trading_pair(pair)}.150",
-                    #         self._trading_pairs,
-                    #     )
-                    # )
-                )
-
+                # await ws.subscribe(
+                #     # list(
+                #     #     map(
+                #     #         lambda pair: f"book.{globitex_utils.convert_to_exchange_trading_pair(pair)}.150",
+                #     #         self._trading_pairs,
+                #     #     )
+                #     # )
+                # )
+                # check this
                 async for response in ws.on_message():
-                    # if response.get("result") is None:
-                    #     continue
-                    response = response["MarketDataIncrementalRefresh"]
+                    if response.get("MarketDataSnapshotFullRefresh") is None:
+                        continue
+                    response = response["MarketDataSnapshotFullRefresh"]
                     order_book_data = response[0]  # ["result"]["data"][0]
                     timestamp: int = ms_timestamp_to_s(response["timestamp"])
                     # data in this channel is not order book diff but the entire order book (up to depth 150).
                     # so we need to convert it into a order book snapshot.
-                    # Globitex does not offer order book diff ws updates.
                     orderbook_msg: OrderBookMessage = GlobitexOrderBook.snapshot_message_from_exchange(
                         order_book_data,
                         timestamp,
