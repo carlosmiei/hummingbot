@@ -3,12 +3,11 @@
 
 import logging
 import numpy as np
-import sys
 from decimal import Decimal
 from typing import Dict
 from hummingbot.logger import HummingbotLogger
 from hummingbot.core.data_type.order_book_row import OrderBookRow
-
+import traceback
 _logger = None
 s_empty_diff = np.ndarray(shape=(0, 4), dtype="float64")
 GlobitexOrderBookTrackingDictionary = Dict[Decimal, Dict[str, Dict[str, any]]]
@@ -85,9 +84,9 @@ class GlobitexActiveOrderTracker():
                     ndmin=2
                 )
             return bids, asks
-        except Exception as e:
-            info = str(sys.exc_info()[0])
-            print(e, info)
+        except Exception:
+            # info = str(sys.exc_info()[0])
+            print(traceback.format_exc())
 
     def c_convert_snapshot_message_to_np_arrays(self, message):
         try:
@@ -138,9 +137,12 @@ class GlobitexActiveOrderTracker():
                 asks = asks.reshape((0, 4))
 
             return bids, asks
-        except Exception as e:
-            info = str(sys.exc_info())
-            print(e, info)
+        except Exception:
+            error = traceback.format_exc()
+            self.logger().network(
+                f"Unexpected c_convert_snapshot_message_to_np_arrays.{error}",
+                exc_info=True,
+            )
 
     def c_convert_trade_message_to_np_array(self, message):
         trade_type_value = 2.0
