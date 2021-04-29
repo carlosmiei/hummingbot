@@ -3,7 +3,7 @@
 
 import logging
 import numpy as np
-
+import sys
 from decimal import Decimal
 from typing import Dict
 from hummingbot.logger import HummingbotLogger
@@ -50,87 +50,97 @@ class GlobitexActiveOrderTracker():
         return float(entry[0]), float(entry[1])
 
     def c_convert_diff_message_to_np_arrays(self, message):
-        content = message.content
-        bid_entries = []
-        ask_entries = []
-        timestamp = message.timestamp
-        # amount = 0
+        try:
+            content = message.content
+            bid_entries = []
+            ask_entries = []
+            timestamp = message.timestamp
+            # amount = 0
+            content_asks, content_bids = get_asks_and_bids(content)
+            bid_entries = content_bids
+            ask_entries = content_asks
 
-        bid_entries = content["bids"]
-        ask_entries = content["asks"]
+            bids = s_empty_diff
+            asks = s_empty_diff
 
-        bids = s_empty_diff
-        asks = s_empty_diff
+            if len(bid_entries) > 0:
+                bids = np.array(
+                    [[timestamp,
+                      float(price),
+                      float(amount),
+                      message.update_id]
+                     for price, amount in [self.get_rates_and_quantities(entry) for entry in bid_entries]],
+                    dtype="float64",
+                    ndmin=2
+                )
 
-        if len(bid_entries) > 0:
-            bids = np.array(
-                [[timestamp,
-                  float(price),
-                  float(amount),
-                  message.update_id]
-                 for price, amount in [self.get_rates_and_quantities(entry) for entry in bid_entries]],
-                dtype="float64",
-                ndmin=2
-            )
-
-        if len(ask_entries) > 0:
-            asks = np.array(
-                [[timestamp,
-                  float(price),
-                  float(amount),
-                  message.update_id]
-                 for price, amount in [self.get_rates_and_quantities(entry) for entry in ask_entries]],
-                dtype="float64",
-                ndmin=2
-            )
-
-        return bids, asks
+            if len(ask_entries) > 0:
+                asks = np.array(
+                    [[timestamp,
+                      float(price),
+                      float(amount),
+                      message.update_id]
+                     for price, amount in [self.get_rates_and_quantities(entry) for entry in ask_entries]],
+                    dtype="float64",
+                    ndmin=2
+                )
+            return bids, asks
+        except Exception as e:
+            info = str(sys.exc_info()[0])
+            print(e, info)
 
     def c_convert_snapshot_message_to_np_arrays(self, message):
-        # Refresh all order tracking.
-        self._active_bids.clear()
-        self._active_asks.clear()
-        timestamp = message.timestamp
-        content = message.content
+        try:
+            # Refresh all order tracking.
+            self._active_bids.clear()
+            self._active_asks.clear()
+            timestamp = message.timestamp
+            content = message.content
 
-        for snapshot_orders, active_orders in [(content["bids"], self._active_bids), (content["asks"], self.active_asks)]:
-            for order in snapshot_orders:
-                price, amount = self.get_rates_and_quantities(order)
+            content_asks, content_bids = get_asks_and_bids(content)
 
-                order_dict = {
-                    "order_id": timestamp,
-                    "amount": amount
-                }
+            for snapshot_orders, active_orders in [(content_bids, self._active_bids),
+                                                   (content_asks, self.active_asks)]:
+                for order in snapshot_orders:
+                    price, amount = self.get_rates_and_quantities(order)
 
-                if price in active_orders:
-                    active_orders[price][timestamp] = order_dict
-                else:
-                    active_orders[price] = {
-                        timestamp: order_dict
+                    order_dict = {
+                        "order_id": timestamp,
+                        "amount": amount
                     }
 
-            bids = np.array(
-                [[message.timestamp,
-                  price,
-                  sum([order_dict["amount"]
-                       for order_dict in self._active_bids[price].values()]),
-                  message.update_id]
-                 for price in sorted(self._active_bids.keys(), reverse=True)], dtype="float64", ndmin=2)
-            asks = np.array(
-                [[message.timestamp,
-                  price,
-                  sum([order_dict["amount"]
-                       for order_dict in self.active_asks[price].values()]),
-                  message.update_id]
-                 for price in sorted(self.active_asks.keys(), reverse=True)], dtype="float64", ndmin=2
-            )
+                    if price in active_orders:
+                        active_orders[price][timestamp] = order_dict
+                    else:
+                        active_orders[price] = {
+                            timestamp: order_dict
+                        }
 
-        if bids.shape[1] != 4:
-            bids = bids.reshape((0, 4))
-        if asks.shape[1] != 4:
-            asks = asks.reshape((0, 4))
+                bids = np.array(
+                    [[message.timestamp,
+                      price,
+                      sum([order_dict["amount"]
+                           for order_dict in self._active_bids[price].values()]),
+                      message.update_id]
+                     for price in sorted(self._active_bids.keys(), reverse=True)], dtype="float64", ndmin=2)
+                asks = np.array(
+                    [[message.timestamp,
+                      price,
+                      sum([order_dict["amount"]
+                           for order_dict in self.active_asks[price].values()]),
+                      message.update_id]
+                     for price in sorted(self.active_asks.keys(), reverse=True)], dtype="float64", ndmin=2
+                )
 
-        return bids, asks
+            if bids.shape[1] != 4:
+                bids = bids.reshape((0, 4))
+            if asks.shape[1] != 4:
+                asks = asks.reshape((0, 4))
+
+            return bids, asks
+        except Exception as e:
+            info = str(sys.exc_info())
+            print(e, info)
 
     def c_convert_trade_message_to_np_array(self, message):
         trade_type_value = 2.0
@@ -154,3 +164,20 @@ class GlobitexActiveOrderTracker():
         bids_row = [OrderBookRow(price, qty, update_id) for ts, price, qty, update_id in np_bids]
         asks_row = [OrderBookRow(price, qty, update_id) for ts, price, qty, update_id in np_asks]
         return bids_row, asks_row
+
+
+def get_asks_and_bids(content):
+    # globitex is not consistent in this websockets contains "ask" otherwise "asks". Same for bid
+
+    asks, bids = [], []
+
+    if "asks" in content:
+        asks = content["asks"]
+    if "ask" in content:
+        asks = content["ask"]
+    if "bid" in content:
+        bids = content["bid"]
+    if "bids" in content:
+        bids = content["bids"]
+
+    return asks, bids
