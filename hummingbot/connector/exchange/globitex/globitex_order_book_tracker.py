@@ -4,7 +4,7 @@ import bisect
 import logging
 import hummingbot.connector.exchange.globitex.globitex_constants as constants
 import time
-
+import sys
 from collections import defaultdict, deque
 from typing import Optional, Dict, List, Deque
 from hummingbot.core.data_type.order_book_message import OrderBookMessageType
@@ -105,6 +105,8 @@ class GlobitexOrderBookTracker(OrderBookTracker):
                 self.logger().network(
                     f"Unexpected error processing order book messages for {trading_pair}.",
                     exc_info=True,
-                    app_warning_msg="Unexpected error processing order book messages. Retrying after 5 seconds.",
+                    app_warning_msg="Unexpected error processing order book messages. Retrying after 5 seconds."
+                    # key error bids check this errro
+                    + str(sys.exc_info()[0]),
                 )
                 await asyncio.sleep(5.0)

@@ -14,7 +14,7 @@ s_empty_diff = np.ndarray(shape=(0, 4), dtype="float64")
 GlobitexOrderBookTrackingDictionary = Dict[Decimal, Dict[str, Dict[str, any]]]
 
 
-class GlobitexActiveOrderTracker:
+class GlobitexActiveOrderTracker():
     def __init__(self,
                  active_asks: GlobitexOrderBookTrackingDictionary = None,
                  active_bids: GlobitexOrderBookTrackingDictionary = None):
@@ -49,18 +49,12 @@ class GlobitexActiveOrderTracker:
         # price, quantity
         return float(entry[0]), float(entry[1])
 
-    cdef tuple c_convert_diff_message_to_np_arrays(self, object message):
-        cdef:
-            dict content = message.content
-            list bid_entries = []
-            list ask_entries = []
-            str order_id
-            str order_side
-            str price_raw
-            object price
-            dict order_dict
-            double timestamp = message.timestamp
-            double amount = 0
+    def c_convert_diff_message_to_np_arrays(self, message):
+        content = message.content
+        bid_entries = []
+        ask_entries = []
+        timestamp = message.timestamp
+        # amount = 0
 
         bid_entries = content["bids"]
         ask_entries = content["asks"]
@@ -92,15 +86,8 @@ class GlobitexActiveOrderTracker:
 
         return bids, asks
 
-    cdef tuple c_convert_snapshot_message_to_np_arrays(self, object message):
-        cdef:
-            float price
-            float amount
-            str order_id
-            dict order_dict
-
+    def c_convert_snapshot_message_to_np_arrays(self, message):
         # Refresh all order tracking.
-        breakpoint()
         self._active_bids.clear()
         self._active_asks.clear()
         timestamp = message.timestamp
@@ -122,15 +109,14 @@ class GlobitexActiveOrderTracker:
                         timestamp: order_dict
                     }
 
-        cdef:
-            np.ndarray[np.float64_t, ndim=2] bids = np.array(
+            bids = np.array(
                 [[message.timestamp,
                   price,
                   sum([order_dict["amount"]
                        for order_dict in self._active_bids[price].values()]),
                   message.update_id]
                  for price in sorted(self._active_bids.keys(), reverse=True)], dtype="float64", ndmin=2)
-            np.ndarray[np.float64_t, ndim=2] asks = np.array(
+            asks = np.array(
                 [[message.timestamp,
                   price,
                   sum([order_dict["amount"]
@@ -146,9 +132,8 @@ class GlobitexActiveOrderTracker:
 
         return bids, asks
 
-    cdef np.ndarray[np.float64_t, ndim=1] c_convert_trade_message_to_np_array(self, object message):
-        cdef:
-            double trade_type_value = 2.0
+    def c_convert_trade_message_to_np_array(self, message):
+        trade_type_value = 2.0
 
         timestamp = message.timestamp
         content = message.content
