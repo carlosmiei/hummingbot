@@ -8,6 +8,7 @@ from typing import Dict
 from hummingbot.logger import HummingbotLogger
 from hummingbot.core.data_type.order_book_row import OrderBookRow
 import traceback
+
 _logger = None
 s_empty_diff = np.ndarray(shape=(0, 4), dtype="float64")
 GlobitexOrderBookTrackingDictionary = Dict[Decimal, Dict[str, Dict[str, any]]]
@@ -46,7 +47,8 @@ class GlobitexActiveOrderTracker():
 
     def get_rates_and_quantities(self, entry) -> tuple:
         # price, quantity
-        return float(entry[0]), float(entry[1])
+        price, size = get_price_and_size(entry)
+        return float(price), float(size)
 
     def c_convert_diff_message_to_np_arrays(self, message):
         try:
@@ -181,5 +183,14 @@ def get_asks_and_bids(content):
         bids = content["bid"]
     if "bids" in content:
         bids = content["bids"]
-
     return asks, bids
+
+
+def get_price_and_size(entry):
+    # another inconsistency in globitex depending on rest/websockets data source
+    if type(entry) is dict:
+        return entry["price"], entry["size"]
+    elif type(entry) is list:
+        return entry[0], entry[1]
+
+    return 0, 0
