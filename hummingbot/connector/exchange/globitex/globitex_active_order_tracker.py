@@ -50,7 +50,7 @@ class GlobitexActiveOrderTracker():
         price, size = get_price_and_size(entry)
         return float(price), float(size)
 
-    def c_convert_diff_message_to_np_arrays(self, message):
+    def convert_diff_message_to_np_arrays(self, message):
         try:
             content = message.content
             bid_entries = []
@@ -87,10 +87,13 @@ class GlobitexActiveOrderTracker():
                 )
             return bids, asks
         except Exception:
-            # info = str(sys.exc_info()[0])
-            print(traceback.format_exc())
+            error = traceback.format_exc()
+            self.logger().network(
+                f"Unexpected convert_diff_message_to_np_arrays.{error}",
+                exc_info=True,
+            )
 
-    def c_convert_snapshot_message_to_np_arrays(self, message):
+    def convert_snapshot_message_to_np_arrays(self, message):
         try:
             # Refresh all order tracking.
             self._active_bids.clear()
@@ -142,11 +145,11 @@ class GlobitexActiveOrderTracker():
         except Exception:
             error = traceback.format_exc()
             self.logger().network(
-                f"Unexpected c_convert_snapshot_message_to_np_arrays.{error}",
+                f"Unexpected convert_snapshot_message_to_np_arrays.{error}",
                 exc_info=True,
             )
 
-    def c_convert_trade_message_to_np_array(self, message):
+    def convert_trade_message_to_np_array(self, message):
         trade_type_value = 2.0
 
         timestamp = message.timestamp
@@ -158,13 +161,13 @@ class GlobitexActiveOrderTracker():
         )
 
     def convert_diff_message_to_order_book_row(self, message):
-        np_bids, np_asks = self.c_convert_diff_message_to_np_arrays(message)
+        np_bids, np_asks = self.convert_diff_message_to_np_arrays(message)
         bids_row = [OrderBookRow(price, qty, update_id) for ts, price, qty, update_id in np_bids]
         asks_row = [OrderBookRow(price, qty, update_id) for ts, price, qty, update_id in np_asks]
         return bids_row, asks_row
 
     def convert_snapshot_message_to_order_book_row(self, message):
-        np_bids, np_asks = self.c_convert_snapshot_message_to_np_arrays(message)
+        np_bids, np_asks = self.convert_snapshot_message_to_np_arrays(message)
         bids_row = [OrderBookRow(price, qty, update_id) for ts, price, qty, update_id in np_bids]
         asks_row = [OrderBookRow(price, qty, update_id) for ts, price, qty, update_id in np_asks]
         return bids_row, asks_row
