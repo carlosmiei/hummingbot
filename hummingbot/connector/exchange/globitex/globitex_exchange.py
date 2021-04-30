@@ -95,6 +95,7 @@ class GlobitexExchange(ExchangeBase):
         self._user_stream_event_listener_task = None
         self._trading_rules_polling_task = None
         self._last_poll_timestamp = 0
+        self._account_id = None
 
     @property
     def name(self) -> str:
@@ -848,5 +849,9 @@ class GlobitexExchange(ExchangeBase):
         return ret_val
 
     async def get_account_id(self) -> str:
-        # dummy for now fill it later
-        return "id"
+        # fetch main account id, multi-account not supported yet
+        if not self._account_id:
+            # fetch account_id
+            response = await self._api_request("get", "1/payment/accounts", True)
+            self._account_id = response["accounts"][0]["account"]
+        return self._account_id
