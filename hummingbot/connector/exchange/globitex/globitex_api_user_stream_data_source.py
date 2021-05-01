@@ -2,12 +2,16 @@
 
 import time
 import asyncio
+import aiohttp
 import logging
 from typing import Optional, List, AsyncIterable, Any
 from hummingbot.core.data_type.user_stream_tracker_data_source import UserStreamTrackerDataSource
 from hummingbot.logger import HummingbotLogger
 from .globitex_auth import GlobitexAuth
-from .globitex_websocket import GlobitexWebsocket
+
+# from .globitex_websocket import GlobitexWebsocket
+from hummingbot.core.utils.async_utils import safe_gather
+import traceback
 
 
 class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
@@ -28,6 +32,7 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
         self._current_listen_key = None
         self._listen_for_user_stream_task = None
         self._last_recv_time: float = 0
+        self._seen_active_orders = {}
         super().__init__()
 
     @property
@@ -38,21 +43,39 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
         """
         Subscribe to active orders via web socket
         """
-
+        # implement here the polling mechanism
+        path = "2/trading/orders/active"
         try:
-            ws = GlobitexWebsocket(self._globitex_auth)
-            await ws.connect()
-            await ws.subscribe(["user.order", "user.trade", "user.balance"])
-            async for msg in ws.on_message():
-                # print(f"WS_SOCKET: {msg}")
-                yield msg
-                self._last_recv_time = time.time()
-                if msg.get("result") is None:
-                    continue
+            async with aiohttp.ClientSession() as client:
+                while True:
+                    try:
+                        async with client.get(path) as response:
+                            response_data = await safe_gather(response.json())
+                            orders = response_data["orders"]
+
+                            # first time we don't have a way to know which orders are new or not
+                            if len(self._seen_active_orders) == 0:
+                                self._seen_active_orders = {order["id"]: order for order in orders}
+                                continue
+                            else:
+                                # we have to find the new order between stored and received and yield
+                                for order in orders:
+                                    if order["id"] not in self._seen_active_orders:
+                                        # possible a new order
+                                        self._seen_active_orders[order["id"]] = order
+                                        yield order
+                                        self._last_recv_time = time.time()
+
+                        await asyncio.sleep(1)
+                    except Exception:
+                        self.logger().network(
+                            "Error fetching active orders", exc_info=True, app_warning_msg=str(traceback.format_exc()),
+                        )
+                        await asyncio.sleep(5)
         except Exception as e:
             raise e
         finally:
-            await ws.disconnect()
+            # await ws.disconnect()
             await asyncio.sleep(5)
 
     async def listen_for_user_stream(self, ev_loop: asyncio.BaseEventLoop, output: asyncio.Queue) -> AsyncIterable[Any]:
