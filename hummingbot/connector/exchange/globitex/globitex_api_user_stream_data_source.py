@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 
+# from aiohttp.client import request
+from hummingbot.connector.exchange.globitex.globitex_exchange import GlobitexExchange
 import time
-import asyncio
 import aiohttp
+import asyncio
 import logging
-from typing import Optional, List, AsyncIterable, Any
+from typing import Optional, List, AsyncIterable, Any, Dict
 from hummingbot.core.data_type.user_stream_tracker_data_source import UserStreamTrackerDataSource
 from hummingbot.logger import HummingbotLogger
 from .globitex_auth import GlobitexAuth
+from hummingbot.connector.exchange.globitex import globitex_utils
 
 # from .globitex_websocket import GlobitexWebsocket
-from hummingbot.core.utils.async_utils import safe_gather
+# from hummingbot.core.utils.async_utils import safe_gather
 import traceback
 
 
@@ -49,22 +52,23 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
             async with aiohttp.ClientSession() as client:
                 while True:
                     try:
-                        async with client.get(path) as response:
-                            response_data = await safe_gather(response.json())
-                            orders = response_data["orders"]
+                        response = self._request(client, "get", path, {}, True)
+                        # async with client.get(path) as response:
+                        #     response_data = await safe_gather(response.json())
+                        orders = response["orders"]
 
-                            # first time we don't have a way to know which orders are new or not
-                            if len(self._seen_active_orders) == 0:
-                                self._seen_active_orders = {order["id"]: order for order in orders}
-                                continue
-                            else:
-                                # we have to find the new order between stored and received and yield
-                                for order in orders:
-                                    if order["id"] not in self._seen_active_orders:
-                                        # possible a new order
-                                        self._seen_active_orders[order["id"]] = order
-                                        yield order
-                                        self._last_recv_time = time.time()
+                        # first time we don't have a way to know which orders are new or not
+                        if len(self._seen_active_orders) == 0:
+                            self._seen_active_orders = {order["id"]: order for order in orders}
+                            continue
+                        else:
+                            # we have to find the new order between stored and received and yield
+                            for order in orders:
+                                if order["id"] not in self._seen_active_orders:
+                                    # possible a new order
+                                    self._seen_active_orders[order["id"]] = order
+                                    yield order
+                                    self._last_recv_time = time.time()
 
                         await asyncio.sleep(1)
                     except Exception:
@@ -98,3 +102,20 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
                     exc_info=True,
                 )
                 await asyncio.sleep(30.0)
+
+    #  tmp request via will be via rest
+    async def _request(
+        self, client: Any, method: str, path_url: str, params: Dict[str, Any] = {}, is_auth_required: bool = False
+    ) -> Dict[str, Any]:
+        if is_auth_required:
+            request_id = globitex_utils.RequestId.generate_request_id()
+            data = {"params": params}
+            headers, params = self._globitex_auth.generate_auth_tuple(
+                path_url, request_id, globitex_utils.get_ms_timestamp(), data
+            )
+        else:
+            headers = {"Content-Type": "application/json"}
+
+        auth_tuple = headers, params
+        response = GlobitexExchange._api_request_dettached(client, method, path_url, params, auth_tuple)
+        return await response

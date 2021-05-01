@@ -13,6 +13,8 @@ import aiohttp
 import math
 import time
 
+# from websockets import auth
+
 from hummingbot.core.network_iterator import NetworkStatus
 from hummingbot.logger import HummingbotLogger
 from hummingbot.core.clock import Clock
@@ -311,7 +313,6 @@ class GlobitexExchange(ExchangeBase):
         signature to the request.
         :returns A response in json format.
         """
-        url = f"{Constants.REST_URL}/{path_url}"
         client = await self._http_client()
         if is_auth_required:
             request_id = globitex_utils.RequestId.generate_request_id()
@@ -319,9 +320,19 @@ class GlobitexExchange(ExchangeBase):
             headers, params = self._globitex_auth.generate_auth_tuple(
                 path_url, request_id, globitex_utils.get_ms_timestamp(), data
             )
-            # headers = self._globitex_auth.get_headers()
         else:
             headers = {"Content-Type": "application/json"}
+
+        auth_tuple = headers, params
+        return self._api_request_dettached(client, method, path_url, params, is_auth_required, auth_tuple)
+
+    @staticmethod
+    async def _api_request_dettached(
+        client: Any, method: str, path_url: str, params: Dict[str, Any] = {}, auth_tuple=None,
+    ) -> Dict[str, Any]:
+
+        url = f"{Constants.REST_URL}/{path_url}"
+        headers, params = auth_tuple[0], auth_tuple[1]
 
         if method == "get":
             response = await client.get(url, headers=headers)
@@ -340,10 +351,6 @@ class GlobitexExchange(ExchangeBase):
             raise IOError(
                 f"Error fetching data from {url}. HTTP status is {response.status}. " f"Message: {parsed_response}"
             )
-        # if parsed_response["code"] != 0:
-        #     raise IOError(f"{url} API call failed, response: {parsed_response}")
-        # print(f"REQUEST: {method} {path_url} {params}")
-        # print(f"RESPONSE: {parsed_response}")
         return parsed_response
 
     def get_order_price_quantum(self, trading_pair: str, price: Decimal):
