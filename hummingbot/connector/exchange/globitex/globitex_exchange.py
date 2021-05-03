@@ -1,4 +1,7 @@
 import logging
+import json
+from hummingbot.connector.exchange.globitex import globitex_constants as Constants
+
 from typing import (
     Dict,
     List,
@@ -314,6 +317,7 @@ class GlobitexExchange(ExchangeBase):
         signature to the request.
         :returns A response in json format.
         """
+        url = f"{Constants.REST_URL}/{path_url}"
         client = await self._http_client()
         if is_auth_required:
             request_id = globitex_utils.RequestId.generate_request_id()
@@ -321,11 +325,28 @@ class GlobitexExchange(ExchangeBase):
             headers, params = self._globitex_auth.generate_auth_tuple(
                 path_url, request_id, globitex_utils.get_ms_timestamp(), data
             )
+            # headers = self._globitex_auth.get_headers()
         else:
             headers = {"Content-Type": "application/json"}
 
-        auth_tuple = headers, params
-        return globitex_utils.api_request_dettached(client, method, path_url, params, is_auth_required, auth_tuple)
+        if method == "get":
+            response = await client.get(url, headers=headers)
+            print("Response:", response._body)
+        elif method == "post":
+            post_json = json.dumps(params)
+            response = await client.post(url, data=post_json, headers=headers)
+        else:
+            raise NotImplementedError
+
+        try:
+            parsed_response = json.loads(await response.text())
+        except Exception as e:
+            raise IOError(f"Error parsing data from {url}. Error: {str(e)}")
+        if response.status != 200:
+            raise IOError(
+                f"Error fetching data from {url}. HTTP status is {response.status}. " f"Message: {parsed_response}"
+            )
+        return parsed_response
 
     def get_order_price_quantum(self, trading_pair: str, price: Decimal):
         """

@@ -11,7 +11,7 @@ from hummingbot.client.config.config_methods import using_exchange
 
 CENTRALIZED = True
 
-EXAMPLE_PAIR = "ETH-USDT"
+EXAMPLE_PAIR = "BTCUSD"
 
 DEFAULT_FEES = [0.1, 0.1]
 

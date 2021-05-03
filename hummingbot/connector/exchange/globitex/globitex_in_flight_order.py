@@ -19,7 +19,7 @@ class GlobitexInFlightOrder(InFlightOrderBase):
         trade_type: TradeType,
         price: Decimal,
         amount: Decimal,
-        initial_state: str = "OPEN",
+        initial_state: str = "NEW",
     ):
         super().__init__(
             client_order_id, exchange_order_id, trading_pair, order_type, trade_type, price, amount, initial_state,
@@ -29,7 +29,7 @@ class GlobitexInFlightOrder(InFlightOrderBase):
 
     @property
     def is_done(self) -> bool:
-        return self.last_state in {"FILLED", "CANCELED", "REJECTED", "EXPIRED"}
+        return self.last_state in {"FILLED", "CANCELED", "REJECTED", "EXPIRED", "SUSPENDED"}
 
     @property
     def is_failure(self) -> bool:
@@ -55,7 +55,7 @@ class GlobitexInFlightOrder(InFlightOrderBase):
         :return: formatted InFlightOrder
         """
         retval = GlobitexInFlightOrder(
-            data["client_order_id"],
+            data["clientOrderId"],
             data["exchange_order_id"],
             data["trading_pair"],
             getattr(OrderType, data["order_type"]),
