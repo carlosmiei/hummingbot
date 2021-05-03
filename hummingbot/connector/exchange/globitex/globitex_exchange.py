@@ -438,19 +438,19 @@ class GlobitexExchange(ExchangeBase):
                 f"Buy order amount {amount} is lower than the minimum order size " f"{trading_rule.min_order_size}."
             )
         api_params = {
-            "instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
+            "symbol": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
             "side": trade_type.name,
-            "type": "LIMIT",
+            "type": "limit",
             "price": f"{price:f}",
             "quantity": f"{amount:f}",
-            "client_oid": order_id,
+            "clientOrderId": order_id,
         }
-        if order_type is OrderType.LIMIT_MAKER:
-            api_params["exec_inst"] = "POST_ONLY"
+        # if order_type is OrderType.LIMIT_MAKER:
+        #     api_params["exec_inst"] = "POST_ONLY"
         self.start_tracking_order(order_id, None, trading_pair, trade_type, price, amount, order_type)
         try:
-            order_result = await self._api_request("post", "private/create-order", api_params, True)
-            exchange_order_id = str(order_result["result"]["order_id"])
+            order_result = await self._api_request("post", "1/trading/new_order", api_params, True)
+            exchange_order_id = str(order_result["ExecutionReport"]["orderId"])
             tracked_order = self._in_flight_orders.get(order_id)
             if tracked_order is not None:
                 self.logger().info(
