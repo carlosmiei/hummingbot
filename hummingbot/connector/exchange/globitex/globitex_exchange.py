@@ -445,6 +445,8 @@ class GlobitexExchange(ExchangeBase):
             "quantity": f"{amount:f}",
             "clientOrderId": order_id,
         }
+        # check this inhere what makes a maker order?
+
         # if order_type is OrderType.LIMIT_MAKER:
         #     api_params["exec_inst"] = "POST_ONLY"
         self.start_tracking_order(order_id, None, trading_pair, trade_type, price, amount, order_type)
@@ -525,10 +527,11 @@ class GlobitexExchange(ExchangeBase):
             ex_order_id = tracked_order.exchange_order_id
             await self._api_request(
                 "post",
-                "private/cancel-order",
+                "private/2/trading/cancel_order",
                 {
-                    "instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
-                    "order_id": ex_order_id,
+                    # "instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
+                    "account": self.get_account_id(),
+                    "clientOrderId": ex_order_id,
                 },
                 True,
             )
