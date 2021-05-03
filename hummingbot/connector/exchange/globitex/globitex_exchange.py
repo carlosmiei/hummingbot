@@ -8,7 +8,6 @@ from typing import (
 )
 from decimal import Decimal
 import asyncio
-import json
 import aiohttp
 import math
 import time
@@ -42,7 +41,9 @@ from hummingbot.connector.exchange.globitex.globitex_user_stream_tracker import 
 from hummingbot.connector.exchange.globitex.globitex_auth import GlobitexAuth
 from hummingbot.connector.exchange.globitex.globitex_in_flight_order import GlobitexInFlightOrder
 from hummingbot.connector.exchange.globitex import globitex_utils
-from hummingbot.connector.exchange.globitex import globitex_constants as Constants
+
+# from hummingbot.connector.exchange.globitex import globitex_constants as Constants
+
 from hummingbot.core.data_type.common import OpenOrder
 
 ctce_logger = None
@@ -324,34 +325,7 @@ class GlobitexExchange(ExchangeBase):
             headers = {"Content-Type": "application/json"}
 
         auth_tuple = headers, params
-        return self._api_request_dettached(client, method, path_url, params, is_auth_required, auth_tuple)
-
-    @staticmethod
-    async def _api_request_dettached(
-        client: Any, method: str, path_url: str, params: Dict[str, Any] = {}, auth_tuple=None,
-    ) -> Dict[str, Any]:
-
-        url = f"{Constants.REST_URL}/{path_url}"
-        headers, params = auth_tuple[0], auth_tuple[1]
-
-        if method == "get":
-            response = await client.get(url, headers=headers)
-            print("Response:", response._body)
-        elif method == "post":
-            post_json = json.dumps(params)
-            response = await client.post(url, data=post_json, headers=headers)
-        else:
-            raise NotImplementedError
-
-        try:
-            parsed_response = json.loads(await response.text())
-        except Exception as e:
-            raise IOError(f"Error parsing data from {url}. Error: {str(e)}")
-        if response.status != 200:
-            raise IOError(
-                f"Error fetching data from {url}. HTTP status is {response.status}. " f"Message: {parsed_response}"
-            )
-        return parsed_response
+        return globitex_utils.api_request_dettached(client, method, path_url, params, is_auth_required, auth_tuple)
 
     def get_order_price_quantum(self, trading_pair: str, price: Decimal):
         """

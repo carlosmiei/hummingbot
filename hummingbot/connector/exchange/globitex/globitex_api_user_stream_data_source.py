@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # from aiohttp.client import request
-from hummingbot.connector.exchange.globitex.globitex_exchange import GlobitexExchange
+# from hummingbot.connector.exchange.globitex.globitex_exchange import _
 import time
 import aiohttp
 import asyncio
@@ -11,6 +11,8 @@ from hummingbot.core.data_type.user_stream_tracker_data_source import UserStream
 from hummingbot.logger import HummingbotLogger
 from .globitex_auth import GlobitexAuth
 from hummingbot.connector.exchange.globitex import globitex_utils
+
+# from hummingbot.connector.exchange.globitex import globitex_constants as Constants
 
 # from .globitex_websocket import GlobitexWebsocket
 # from hummingbot.core.utils.async_utils import safe_gather
@@ -116,6 +118,6 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
         else:
             headers = {"Content-Type": "application/json"}
 
-        auth_tuple = headers, params
-        response = GlobitexExchange._api_request_dettached(client, method, path_url, params, auth_tuple)
+        response = globitex_utils.api_request_dettached(client, method, path_url, params, {headers, params}, True)
+
         return await response

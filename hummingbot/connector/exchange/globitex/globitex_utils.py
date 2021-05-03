@@ -1,5 +1,6 @@
 import math
-from typing import Dict, List
+import json
+from typing import Dict, List, Any
 
 from hummingbot.core.utils.tracking_nonce import get_tracking_nonce, get_tracking_nonce_low_res
 from . import globitex_constants as Constants
@@ -43,6 +44,33 @@ def get_ms_timestamp() -> int:
 # convert milliseconds timestamp to seconds
 def ms_timestamp_to_s(ms: int) -> int:
     return math.floor(ms / 1e3)
+
+
+async def api_request_dettached(
+    client: Any, method: str, path_url: str, params: Dict[str, Any] = {}, auth_tuple=None,
+) -> Dict[str, Any]:
+
+    url = f"{Constants.REST_URL}/{path_url}"
+    headers, params = auth_tuple[0], auth_tuple[1]
+
+    if method == "get":
+        response = await client.get(url, headers=headers)
+        print("Response:", response._body)
+    elif method == "post":
+        post_json = json.dumps(params)
+        response = await client.post(url, data=post_json, headers=headers)
+    else:
+        raise NotImplementedError
+
+    try:
+        parsed_response = json.loads(await response.text())
+    except Exception as e:
+        raise IOError(f"Error parsing data from {url}. Error: {str(e)}")
+    if response.status != 200:
+        raise IOError(
+            f"Error fetching data from {url}. HTTP status is {response.status}. " f"Message: {parsed_response}"
+        )
+    return parsed_response
 
 
 # Request ID class
