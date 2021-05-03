@@ -834,5 +834,8 @@ class GlobitexExchange(ExchangeBase):
         if not self._account_id:
             # fetch account_id
             response = await self._api_request("get", "1/payment/accounts", True)
-            self._account_id = response["accounts"][0]["account"]
+            account_id = response["accounts"][0]["account"]
+            self._account_id = account_id
+            # tmp hack
+            globitex_utils.set_account_id(account_id)
         return self._account_id

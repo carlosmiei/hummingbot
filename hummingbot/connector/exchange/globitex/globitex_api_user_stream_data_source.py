@@ -38,6 +38,7 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
         self._listen_for_user_stream_task = None
         self._last_recv_time: float = 0
         self._seen_active_orders = {}
+
         super().__init__()
 
     @property
@@ -54,7 +55,7 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
             async with aiohttp.ClientSession() as client:
                 while True:
                     try:
-                        response = self._request(client, "get", path, {}, True)
+                        response = self._request(client, "get", path, {"account": globitex_utils.ACCOUNT_ID}, True)
                         # async with client.get(path) as response:
                         #     response_data = await safe_gather(response.json())
                         orders = response["orders"]

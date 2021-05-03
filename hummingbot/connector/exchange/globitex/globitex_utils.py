@@ -17,6 +17,8 @@ DEFAULT_FEES = [0.1, 0.1]
 
 HBOT_BROKER_ID = "HBOT-"
 
+ACCOUNT_ID = ""
+
 
 # deeply merge two dictionaries
 def merge_dicts(source: Dict, destination: Dict) -> Dict:
@@ -102,6 +104,12 @@ def get_new_client_order_id(is_buy: bool, trading_pair: str) -> str:
 
 def get_api_reason(code: str) -> str:
     return Constants.API_REASONS.get(int(code), code)
+
+
+# hack for now
+def set_account_id(account_id: str):
+    global ACCOUNT_ID
+    ACCOUNT_ID = account_id
 
 
 KEYS = {
