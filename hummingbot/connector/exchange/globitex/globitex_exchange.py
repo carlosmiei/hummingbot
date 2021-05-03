@@ -256,7 +256,7 @@ class GlobitexExchange(ExchangeBase):
                 await asyncio.sleep(0.5)
 
     async def _update_trading_rules(self):
-        instruments_info = await self._api_request("get", path_url="public/get-instruments")
+        instruments_info = await self._api_request("get", path_url="1/public/symbols")
         self._trading_rules.clear()
         self._trading_rules = self._format_trading_rules(instruments_info)
 
@@ -266,39 +266,26 @@ class GlobitexExchange(ExchangeBase):
         :param instruments_info: The json API response
         :return A dictionary of trading rules.
         Response Example:
-        {
-            "id": 11,
-            "method": "public/get-instruments",
-            "code": 0,
-            "result": {
-                "instruments": [
-                      {
-                        "instrument_name": "ETH_CRO",
-                        "quote_currency": "CRO",
-                        "base_currency": "ETH",
-                        "price_decimals": 2,
-                        "quantity_decimals": 2
-                      },
-                      {
-                        "instrument_name": "CRO_BTC",
-                        "quote_currency": "BTC",
-                        "base_currency": "CRO",
-                        "price_decimals": 8,
-                        "quantity_decimals": 2
-                      }
-                    ]
-              }
-        }
+            { "symbols": [
+                {
+                    "symbol":"BTCEUR",
+                    "priceIncrement":"0.01",
+                    "sizeIncrement":"0.00000001",
+                    "sizeMin":"0.002",
+                    "currency":"EUR",
+                    "commodity":"BTC"
+                }
+                ] }
         """
         result = {}
-        for rule in instruments_info["result"]["instruments"]:
+        for rule in instruments_info["symbols"]:
             try:
-                trading_pair = globitex_utils.convert_from_exchange_trading_pair(rule["instrument_name"])
-                price_decimals = Decimal(str(rule["price_decimals"]))
-                quantity_decimals = Decimal(str(rule["quantity_decimals"]))
+                trading_pair = globitex_utils.convert_from_exchange_trading_pair(rule["symbol"])
+                # price_decimals = Decimal(str(rule["price_decimals"]))
+                # quantity_decimals = Decimal(str(rule["quantity_decimals"]))
                 # E.g. a price decimal of 2 means 0.01 incremental.
-                price_step = Decimal("1") / Decimal(str(math.pow(10, price_decimals)))
-                quantity_step = Decimal("1") / Decimal(str(math.pow(10, quantity_decimals)))
+                price_step = Decimal(rule["priceIncrement"])
+                quantity_step = Decimal(rule["sizeIncrement"])
                 result[trading_pair] = TradingRule(
                     trading_pair, min_price_increment=price_step, min_base_amount_increment=quantity_step
                 )
