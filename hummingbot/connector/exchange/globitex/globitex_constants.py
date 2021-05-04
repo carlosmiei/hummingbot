@@ -8,6 +8,19 @@ WSS_PRIVATE_URL = "wss://d289dek49b4wqs.cloudfront.net/v2/user"
 # WSS_PUBLIC_URL = "wss://stream.Globitex/v2/market"
 WSS_PUBLIC_URL = "wss://stream.globitex.com/market-data"
 
+
+ENDPOINT = {
+    # Public Endpoints
+    "TICKER": "marketwatch/ticker",
+    "SYMBOL": "instruments",
+    "ORDER_BOOK": "marketwatch/orderbook/{trading_pair}/150/2",
+    "ORDER_CREATE": "orders/new",
+    "ORDER_DELETE": "orders/cancel",
+    "ORDER_STATUS": "orders/list",
+    "USER_ORDERS": "orders/list",
+    "USER_BALANCES": "1/payment/accounts",
+}
+
 API_REASONS = {
     0: "Success",
     10001: "Malformed request, (E.g. not using application/json for REST)",
