@@ -614,7 +614,7 @@ class GlobitexExchange(ExchangeBase):
                     self.logger().info(f"_update_order_status result not in resp: {response}")
                     continue
                 result = response["orders"]
-                # filter trades with the same clientOrderId
+                # match trades with the same clientOrderId
                 order_trades = [
                     trade for trade in trades_response if trade["originalOrderId"] == response["clientOrderId"]
                 ]

@@ -56,37 +56,38 @@ class GlobitexInFlightOrder(InFlightOrderBase):
         """
         retval = GlobitexInFlightOrder(
             data["clientOrderId"],
-            data["exchange_order_id"],
-            data["trading_pair"],
-            getattr(OrderType, data["order_type"]),
-            getattr(TradeType, data["trade_type"]),
-            Decimal(data["price"]),
-            Decimal(data["amount"]),
-            data["last_state"],
+            data["orderId"],
+            data["symbol"],
+            getattr(OrderType, data["type"]),
+            getattr(TradeType, data["side"]),
+            Decimal(data["orderPrice"]),
+            Decimal(data["orderQuantity"]),
+            data["orderStatus"],
         )
-        retval.executed_amount_base = Decimal(data["executed_amount_base"])
-        retval.executed_amount_quote = Decimal(data["executed_amount_quote"])
-        retval.fee_asset = data["fee_asset"]
-        retval.fee_paid = Decimal(data["fee_paid"])
-        retval.last_state = data["last_state"]
+        # Check if these values are available or not
+        # retval.executed_amount_base = Decimal(data["executed_amount_base"])
+        # retval.executed_amount_quote = Decimal(data["executed_amount_quote"])
+        # retval.fee_asset = data["fee_asset"]
+        # retval.fee_paid = Decimal(data["fee_paid"])
+        # retval.last_state = data["last_state"]
         return retval
 
     def update_with_trade_update(self, trade_update: Dict[str, Any]) -> bool:
         """
-        Updates the in flight order with trade update (from private/get-order-detail end point)
+        Updates the in flight order with trade update (from /api/1/trading/trades end point)
         return: True if the order gets updated otherwise False
         """
-        trade_id = trade_update["trade_id"]
+        trade_id = trade_update["tradeId"]
         # trade_update["orderId"] is type int
-        if str(trade_update["order_id"]) != self.exchange_order_id or trade_id in self.trade_id_set:
+        if str(trade_update["originalOrderId"]) != self.exchange_order_id or trade_id in self.trade_id_set:
             # trade already recorded
             return False
         self.trade_id_set.add(trade_id)
-        self.executed_amount_base += Decimal(str(trade_update["traded_quantity"]))
+        self.executed_amount_base += Decimal(str(trade_update["execQuantity"]))
         self.fee_paid += Decimal(str(trade_update["fee"]))
-        self.executed_amount_quote += Decimal(str(trade_update["traded_price"])) * Decimal(
-            str(trade_update["traded_quantity"])
+        self.executed_amount_quote += Decimal(str(trade_update["execPrice"])) * Decimal(
+            str(trade_update["execQuantity"])
         )
         if not self.fee_asset:
-            self.fee_asset = trade_update["fee_currency"]
+            self.fee_asset = trade_update["feeCurrency"]
         return True
