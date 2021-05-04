@@ -808,28 +808,31 @@ class GlobitexExchange(ExchangeBase):
         GlobitexAPIUserStreamDataSource.
         we should disable this
         """
-        async for event_message in self._iter_user_event_queue():
-            try:
-                if "result" not in event_message or "channel" not in event_message["result"]:
-                    continue
-                channel = event_message["result"]["channel"]
-                if "user.trade" in channel:
-                    for trade_msg in event_message["result"]["data"]:
-                        await self._process_trade_message(trade_msg)
-                elif "user.order" in channel:
-                    for order_msg in event_message["result"]["data"]:
-                        self._process_order_message(order_msg)
-                elif channel == "user.balance":
-                    balances = event_message["result"]["data"]
-                    for balance_entry in balances:
-                        asset_name = balance_entry["currency"]
-                        self._account_balances[asset_name] = Decimal(str(balance_entry["balance"]))
-                        self._account_available_balances[asset_name] = Decimal(str(balance_entry["available"]))
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                self.logger().error("Unexpected error in user stream listener loop.", exc_info=True)
-                await asyncio.sleep(5.0)
+        # async for event_message in self._iter_user_event_queue():
+        #     try:
+        #         if "result" not in event_message or "channel" not in event_message["result"]:
+        #             continue
+        #         channel = event_message["result"]["channel"]
+        #         if "user.trade" in channel:
+        #             for trade_msg in event_message["result"]["data"]:
+        #                 await self._process_trade_message(trade_msg)
+        #         elif "user.order" in channel:
+        #             for order_msg in event_message["result"]["data"]:
+        #                 self._process_order_message(order_msg)
+        #         elif channel == "user.balance":
+        #             balances = event_message["result"]["data"]
+        #             for balance_entry in balances:
+        #                 asset_name = balance_entry["currency"]
+        #                 self._account_balances[asset_name] = Decimal(str(balance_entry["balance"]))
+        #                 self._account_available_balances[asset_name] = Decimal(str(balance_entry["available"]))
+        #     except asyncio.CancelledError:
+        #         raise
+        #     except Exception:
+        #         self.logger().error("Unexpected error in user stream listener loop.", exc_info=True)
+        #         await asyncio.sleep(5.0)exchange_order_id
+
+        # tmp disable websockets related stuff
+        raise NotImplementedError
 
     async def get_open_orders(self) -> List[OpenOrder]:
         result = await self._api_request("get", "2/trading/orders/active", {"account": self.get_account_id()}, True)

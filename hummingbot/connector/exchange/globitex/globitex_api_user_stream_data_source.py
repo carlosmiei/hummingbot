@@ -94,18 +94,21 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
         :param output: an async queue where the incoming messages are stored
         """
 
-        while True:
-            try:
-                async for msg in self._listen_to_orders_trades_balances():
-                    output.put_nowait(msg)
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                self.logger().error(
-                    "Unexpected error with Globitex WebSocket connection. " "Retrying after 30 seconds...",
-                    exc_info=True,
-                )
-                await asyncio.sleep(30.0)
+        # while True:
+        #     try:
+        #         async for msg in self._listen_to_orders_trades_balances():
+        #             output.put_nowait(msg)
+        #     except asyncio.CancelledError:
+        #         raise
+        #     except Exception:
+        #         self.logger().error(
+        #             "Unexpected error with Globitex WebSocket connection. " "Retrying after 30 seconds...",
+        #             exc_info=True,
+        #         )
+        #         await asyncio.sleep(30.0)
+
+        # tmp disabling rest polling this side
+        raise NotImplementedError
 
     #  tmp request via will be via rest (duplicataed for now)
     async def _api_request(
