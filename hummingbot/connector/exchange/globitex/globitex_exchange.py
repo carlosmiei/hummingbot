@@ -281,9 +281,6 @@ class GlobitexExchange(ExchangeBase):
         for rule in instruments_info["symbols"]:
             try:
                 trading_pair = globitex_utils.convert_from_exchange_trading_pair(rule["symbol"])
-                # price_decimals = Decimal(str(rule["price_decimals"]))
-                # quantity_decimals = Decimal(str(rule["quantity_decimals"]))
-                # E.g. a price decimal of 2 means 0.01 incremental.
                 price_step = Decimal(rule["priceIncrement"])
                 quantity_step = Decimal(rule["sizeIncrement"])
                 result[trading_pair] = TradingRule(
@@ -318,7 +315,6 @@ class GlobitexExchange(ExchangeBase):
 
         if method == "get":
             response = await client.get(url, headers=headers)
-            print("Response:", response._body)
         elif method == "post":
             post_json = json.dumps(params)
             response = await client.post(url, data=post_json, headers=headers)
@@ -592,6 +588,14 @@ class GlobitexExchange(ExchangeBase):
             tasks = []
             for tracked_order in tracked_orders:
                 order_id = await tracked_order.get_exchange_order_id()
+
+                trades_task = self._api_request(
+                    "get",
+                    "/api/1/trading/trades",
+                    {"account": self.get_account_id, "maxResults": 1000, "startIndex": 0, "by": "trade_id"},
+                    True,
+                )
+                tasks.append(trades_task)
                 tasks.append(
                     self._api_request(
                         "get", "1/trading/order", {"clientOrderId": order_id, "account": self.get_account_id()}, True
@@ -599,17 +603,25 @@ class GlobitexExchange(ExchangeBase):
                 )
             self.logger().debug(f"Polling for order status updates of {len(tasks)} orders.")
             responses = await safe_gather(*tasks, return_exceptions=True)
-            for response in responses:
+            trades_response = responses[0]["trades"]
+            # trades_dict = {trade["id"]: trade for trade in trades_response}
+            orders_response = responses[1:]
+
+            for response in orders_response:
                 if isinstance(response, Exception):
                     raise response
                 if "orders" not in response:
                     self.logger().info(f"_update_order_status result not in resp: {response}")
                     continue
                 result = response["orders"]
-                # if "trade_list" in result:
-                #     for trade_msg in result["trade_list"]:
-                #         await self._process_trade_message(trade_msg)
-                self._process_order_message(result["order_info"])
+                # filter trades with the same clientOrderId
+                order_trades = [
+                    trade for trade in trades_response if trade["originalOrderId"] == response["clientOrderId"]
+                ]
+                if len(order_trades) > 0:
+                    for trade_msg in order_trades:
+                        await self._process_trade_message(trade_msg)
+                self._process_order_message(result)
 
     def _process_order_message(self, order_msg: Dict[str, Any]):
         """
@@ -645,7 +657,9 @@ class GlobitexExchange(ExchangeBase):
         """
         for order in self._in_flight_orders.values():
             await order.get_exchange_order_id()
-        track_order = [o for o in self._in_flight_orders.values() if trade_msg["order_id"] == o.exchange_order_id]
+        track_order = [
+            o for o in self._in_flight_orders.values() if trade_msg["originalOrderId"] == o.exchange_order_id
+        ]
         if not track_order:
             return
         tracked_order = track_order[0]
@@ -660,10 +674,10 @@ class GlobitexExchange(ExchangeBase):
                 tracked_order.trading_pair,
                 tracked_order.trade_type,
                 tracked_order.order_type,
-                Decimal(str(trade_msg["traded_price"])),
-                Decimal(str(trade_msg["traded_quantity"])),
-                TradeFee(0.0, [(trade_msg["fee_currency"], Decimal(str(trade_msg["fee"])))]),
-                exchange_trade_id=trade_msg["order_id"],
+                Decimal(str(trade_msg["execPrice"])),
+                Decimal(str(trade_msg["execQuantity"])),
+                TradeFee(0.0, [(trade_msg["feeCurrency"], Decimal(str(trade_msg["fee"])))]),
+                exchange_trade_id=trade_msg["originalOrderId"],
             ),
         )
         if (
@@ -792,6 +806,7 @@ class GlobitexExchange(ExchangeBase):
         """
         Listens to message in _user_stream_tracker.user_stream queue. The messages are put in by
         GlobitexAPIUserStreamDataSource.
+        we should disable this
         """
         async for event_message in self._iter_user_event_queue():
             try:
