@@ -4,6 +4,7 @@ import os
 from hummingbot.client.config.global_config_map import connector_keys
 
 import logging as _logging
+
 _logger = _logging.getLogger(__name__)
 
 master_host = "***REMOVED***"
@@ -38,9 +39,14 @@ kafka_bootstrap_server = "***REMOVED***"
 # whether to enable api mocking in unit test cases
 mock_api_enabled = os.getenv("MOCK_API_ENABLED")
 
+globitex_api_key = os.getenv("GLOBITEX_API_KEY")
+
+globitex_api_secret = os.getenv("GLOBITEX_API_SECRET")
+
 # ALL TEST KEYS
 for key in connector_keys().keys():
     locals()[key] = os.getenv(key.upper())
+
 
 """
 # Binance Tests
@@ -123,28 +129,25 @@ coinalpha_order_book_api_username = "***REMOVED***"
 coinalpha_order_book_api_password = "***REMOVED***"
 """
 
-kafka_2 = {
-    "bootstrap_servers": "***REMOVED***",
-    "zookeeper_servers": "***REMOVED***"
-}
+kafka_2 = {"bootstrap_servers": "***REMOVED***", "zookeeper_servers": "***REMOVED***"}
 
 
 try:
-    from .config_local import *             # noqa: F401, F403
+    from .config_local import *  # noqa: F401, F403
 except ModuleNotFoundError:
     pass
 
 try:
-    from .web3_wallet_secret import *       # noqa: F401, F403
+    from .web3_wallet_secret import *  # noqa: F401, F403
 except ModuleNotFoundError:
     pass
 
 try:
-    from .binance_secret import *           # noqa: F401, F403
+    from .binance_secret import *  # noqa: F401, F403
 except ModuleNotFoundError:
     pass
 
 try:
-    from .coinbase_pro_secrets import *     # noqa: F401, F403
+    from .coinbase_pro_secrets import *  # noqa: F401, F403
 except ModuleNotFoundError:
     pass

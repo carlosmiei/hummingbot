@@ -222,7 +222,7 @@ class GlobitexExchange(ExchangeBase):
         """
         try:
             # since there is no ping endpoint, the lowest rate call is to get BTC-USDT ticker
-            await self._api_request("get", "1/public/time")
+            await self._api_request("get", Constants.ENDPOINT["TIME"])
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -256,7 +256,7 @@ class GlobitexExchange(ExchangeBase):
                 await asyncio.sleep(0.5)
 
     async def _update_trading_rules(self):
-        instruments_info = await self._api_request("get", path_url="1/public/symbols")
+        instruments_info = await self._api_request("get", Constants.ENDPOINT["SYMBOLS"])
         self._trading_rules.clear()
         self._trading_rules = self._format_trading_rules(instruments_info)
 
@@ -434,7 +434,7 @@ class GlobitexExchange(ExchangeBase):
         #     api_params["exec_inst"] = "POST_ONLY"
         self.start_tracking_order(order_id, None, trading_pair, trade_type, price, amount, order_type)
         try:
-            order_result = await self._api_request("post", "1/trading/new_order", api_params, True)
+            order_result = await self._api_request("post", Constants.ENDPOINT["ORDER_CREATE"], api_params, True)
             exchange_order_id = str(order_result["ExecutionReport"]["orderId"])
             tracked_order = self._in_flight_orders.get(order_id)
             if tracked_order is not None:

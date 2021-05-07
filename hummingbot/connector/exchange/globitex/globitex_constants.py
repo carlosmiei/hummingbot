@@ -11,10 +11,11 @@ WSS_PUBLIC_URL = "wss://stream.globitex.com/market-data"
 
 ENDPOINT = {
     # Public Endpoints
+    "TIME": "1/public/time",
     "TICKER": "marketwatch/ticker",
-    "SYMBOL": "instruments",
+    "SYMBOLS": "instruments",
     "ORDER_BOOK": "marketwatch/orderbook/{trading_pair}/150/2",
-    "ORDER_CREATE": "orders/new",
+    "ORDER_CREATE": "1/trading/new_order",
     "ORDER_DELETE": "orders/cancel",
     "ORDER_STATUS": "orders/list",
     "USER_ORDERS": "orders/list",

@@ -30,6 +30,13 @@ class GlobitexOrderBook(OrderBook):
         :return: GlobitexOrderBookMessage
         """
 
+        # correct here diff between ask and asks, bid and bids
+        if "asks" in msg:
+            msg["ask"] = msg["asks"]
+
+        if "bids" in msg:
+            msg["bid"] = msg["bids"]
+
         if metadata:
             msg.update(metadata)
 

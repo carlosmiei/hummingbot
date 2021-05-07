@@ -31,6 +31,9 @@ class TestAuth(unittest.TestCase):
         return await response.json()
 
     def test_rest_auth(self):
+        self.log.debug("AUTH STARTED")
+        self.log.warning("AUTH")
+        print("teste")
         result = self.ev_loop.run_until_complete(self.rest_auth())
         accounts = result["accounts"]
         assert len(accounts) > 0
