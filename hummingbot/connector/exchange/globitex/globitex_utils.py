@@ -48,6 +48,15 @@ def ms_timestamp_to_s(ms: int) -> int:
     return math.floor(ms / 1e3)
 
 
+def normalize_asks_and_bids(data: Dict[str, Any] = {}):
+    if "ask" in data:
+        data["asks"] = data["ask"]
+
+    if "bid" in data:
+        data["bids"] = data["bid"]
+    return data
+
+
 async def api_request_dettached(
     client: Any, method: str, path_url: str, params: Dict[str, Any] = {}, auth_tuple=None,
 ) -> Dict[str, Any]:

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from hummingbot.connector.exchange.globitex import globitex_utils
 import logging
 import hummingbot.connector.exchange.globitex.globitex_constants as constants
 
@@ -31,11 +32,7 @@ class GlobitexOrderBook(OrderBook):
         """
 
         # correct here diff between ask and asks, bid and bids
-        if "asks" in msg:
-            msg["ask"] = msg["asks"]
-
-        if "bids" in msg:
-            msg["bid"] = msg["bids"]
+        msg = globitex_utils.normalize_asks_and_bids(msg)
 
         if metadata:
             msg.update(metadata)
@@ -65,6 +62,8 @@ class GlobitexOrderBook(OrderBook):
         :return: GlobitexOrderBookMessage
         """
 
+        # correct here diff between ask and asks, bid and bids
+        msg = globitex_utils.normalize_asks_and_bids(msg)
         if metadata:
             msg.update(metadata)
 
@@ -78,6 +77,7 @@ class GlobitexOrderBook(OrderBook):
         :param record: a row of diff data from the database
         :return: GlobitexOrderBookMessage
         """
+
         return GlobitexOrderBookMessage(
             message_type=OrderBookMessageType.DIFF, content=record.json, timestamp=record.timestamp
         )

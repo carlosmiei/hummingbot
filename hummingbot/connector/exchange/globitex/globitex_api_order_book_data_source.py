@@ -156,7 +156,7 @@ class GlobitexAPIOrderBookDataSource(OrderBookTrackerDataSource):
                     timestamp: int = ms_timestamp_to_s(response["timestamp"])
                     # data in this channel is not order book diff but the entire order book (up to depth 150).
                     # so we need to convert it into a order book snapshot.
-                    orderbook_msg: OrderBookMessage = GlobitexOrderBook.snapshot_message_from_exchange(
+                    orderbook_msg: OrderBookMessage = GlobitexOrderBook.diff_message_from_exchange(
                         order_book_data,
                         timestamp,
                         metadata={

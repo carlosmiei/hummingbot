@@ -12,7 +12,7 @@ from typing import Dict, Optional, List
 from hummingbot.core.event.event_logger import EventLogger
 from hummingbot.core.event.events import OrderBookEvent, OrderBookTradeEvent, TradeType
 
-# from hummingbot.logger import HummingbotLogger
+from hummingbot.logger import HummingbotLogger
 
 # from hummingbot.connector.exchange.crypto_com.crypto_com_order_book_tracker import CryptoComOrderBookTracker
 from hummingbot.connector.exchange.globitex.globitex_order_book_tracker import GlobitexOrderBookTracker
@@ -30,16 +30,16 @@ class GlobitexOrderBookTrackerUnitTest(unittest.TestCase):
     order_book_tracker: Optional[GlobitexOrderBookTracker] = None
     events: List[OrderBookEvent] = [OrderBookEvent.TradeEvent]
     trading_pairs: List[str] = [
-        "BTC-USDT",
+        "ETH-EUR",
         "BTC-EUR",
     ]
-    # _logger: Optional[HummingbotLogger] = None
+    _logger: Optional[HummingbotLogger] = None
 
-    # @classmethod
-    # def logger(cls) -> HummingbotLogger:
-    #     if cls._logger is None:
-    #         cls._logger = logging.getLogger(__name__)
-    #     return cls._logger
+    @classmethod
+    def logger(cls) -> HummingbotLogger:
+        if cls._logger is None:
+            cls._logger = logging.getLogger(__name__)
+        return cls._logger
 
     @classmethod
     def setUpClass(cls):
@@ -100,7 +100,7 @@ class GlobitexOrderBookTrackerUnitTest(unittest.TestCase):
         # Wait 5 seconds to process some diffs.
         self.ev_loop.run_until_complete(asyncio.sleep(3.0))  # it was 10
         order_books: Dict[str, OrderBook] = self.order_book_tracker.order_books
-        eth_usdt: OrderBook = order_books["BTC-USDT"]
+        eth_usdt: OrderBook = order_books["ETH-EUR"]
         self.assertIsNot(eth_usdt.last_diff_uid, 0)
         self.assertGreaterEqual(eth_usdt.get_price_for_volume(True, 10).result_price, eth_usdt.get_price(True))
         self.assertLessEqual(eth_usdt.get_price_for_volume(False, 10).result_price, eth_usdt.get_price(False))
@@ -111,7 +111,7 @@ class GlobitexOrderBookTrackerUnitTest(unittest.TestCase):
         )
         for key, value in prices.items():
             print(f"{key} last_trade_price: {value}")
-        self.assertGreater(prices["BTC-USDT"], 1000)
+        self.assertGreater(prices["ETH-EUR"], 1000)
         self.assertLess(prices["BTC-EUR"], 1)
 
 
