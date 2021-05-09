@@ -12,16 +12,13 @@ from typing import Dict, Optional, List
 from hummingbot.core.event.event_logger import EventLogger
 from hummingbot.core.event.events import OrderBookEvent, OrderBookTradeEvent, TradeType
 
-from hummingbot.logger import HummingbotLogger
+# from hummingbot.logger import HummingbotLogger
 
-# from hummingbot.connector.exchange.crypto_com.crypto_com_order_book_tracker import CryptoComOrderBookTracker
 from hummingbot.connector.exchange.globitex.globitex_order_book_tracker import GlobitexOrderBookTracker
 
-# from hummingbot.connector.exchange.crypto_com.crypto_com_api_order_book_data_source import CryptoComAPIOrderBookDataSource
 from hummingbot.connector.exchange.globitex.globitex_api_order_book_data_source import GlobitexAPIOrderBookDataSource
 from hummingbot.core.data_type.order_book import OrderBook
 
-# from pdb import set_trace as bp
 
 sys.path.insert(0, realpath(join(__file__, "../../../")))
 
@@ -33,13 +30,13 @@ class GlobitexOrderBookTrackerUnitTest(unittest.TestCase):
         "ETH-EUR",
         "BTC-EUR",
     ]
-    _logger: Optional[HummingbotLogger] = None
+    # _logger: Optional[HummingbotLogger] = None
 
-    @classmethod
-    def logger(cls) -> HummingbotLogger:
-        if cls._logger is None:
-            cls._logger = logging.getLogger(__name__)
-        return cls._logger
+    # @classmethod
+    # def logger(cls) -> HummingbotLogger:
+    #     if cls._logger is None:
+    #         cls._logger = logging.getLogger(__name__)
+    #     return cls._logger
 
     @classmethod
     def setUpClass(cls):
@@ -100,10 +97,10 @@ class GlobitexOrderBookTrackerUnitTest(unittest.TestCase):
         # Wait 5 seconds to process some diffs.
         self.ev_loop.run_until_complete(asyncio.sleep(3.0))  # it was 10
         order_books: Dict[str, OrderBook] = self.order_book_tracker.order_books
-        eth_usdt: OrderBook = order_books["ETH-EUR"]
-        self.assertIsNot(eth_usdt.last_diff_uid, 0)
-        self.assertGreaterEqual(eth_usdt.get_price_for_volume(True, 10).result_price, eth_usdt.get_price(True))
-        self.assertLessEqual(eth_usdt.get_price_for_volume(False, 10).result_price, eth_usdt.get_price(False))
+        eth_eur: OrderBook = order_books["ETH-EUR"]
+        self.assertIsNot(eth_eur.last_diff_uid, 0)
+        self.assertGreaterEqual(eth_eur.get_price_for_volume(True, 10).result_price, eth_eur.get_price(True))
+        self.assertLessEqual(eth_eur.get_price_for_volume(False, 10).result_price, eth_eur.get_price(False))
 
     def test_api_get_last_traded_prices(self):
         prices = self.ev_loop.run_until_complete(
