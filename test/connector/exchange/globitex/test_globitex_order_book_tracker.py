@@ -95,7 +95,7 @@ class GlobitexOrderBookTrackerUnitTest(unittest.TestCase):
 
     def test_tracker_integrity(self):
         # Wait 5 seconds to process some diffs.
-        self.ev_loop.run_until_complete(asyncio.sleep(3.0))  # it was 10
+        self.ev_loop.run_until_complete(asyncio.sleep(10.0))  # it was 10
         order_books: Dict[str, OrderBook] = self.order_book_tracker.order_books
         eth_eur: OrderBook = order_books["ETH-EUR"]
         self.assertIsNot(eth_eur.last_diff_uid, 0)
