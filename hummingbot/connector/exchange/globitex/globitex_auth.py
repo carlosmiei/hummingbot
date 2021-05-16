@@ -25,11 +25,15 @@ class GlobitexAuth:
         data_params = data.get("params", {})
         if not data_params:
             data["params"] = {}
-        params = "".join(f"{key}{data_params[key]}" for key in sorted(data_params))
+        # check here logic for multiple params missing &
+        params = "".join(f"{key}={data_params[key]}" for key in sorted(data_params))
 
         # payload = f"{path_url}{data['id']}" f"{self.api_key}{params}{data['nonce']}"
+        if params:
+            message = f"{self.api_key}&{str(nonce)}/api/{path_url}?{params}"
+        else:
+            message = f"{self.api_key}&{str(nonce)}/api/{path_url}"
 
-        message = f"{self.api_key}&{str(nonce)}/api/{path_url}{params}"
         signed_message = self.sign_message(message)
         headers = self.get_headers(nonce, signed_message)
         # data["sig"] = hmac.new(self.secret_key.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
