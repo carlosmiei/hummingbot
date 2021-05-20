@@ -1,50 +1,39 @@
 # A single source of truth for constant variables related to the exchange
 
-
 EXCHANGE_NAME = "globitex"
 REST_URL = "https://api.globitex.com/api"
-# WSS_PRIVATE_URL = "wss://stream.Globitex/v2/user"
 WSS_PRIVATE_URL = "wss://d289dek49b4wqs.cloudfront.net/v2/user"
-# WSS_PUBLIC_URL = "wss://stream.Globitex/v2/market"
 WSS_PUBLIC_URL = "wss://stream.globitex.com/market-data"
 
+# public
+ENDPOINT_TIME = "1/public/time"
+ENDPOINT_SYMBOLS = "1/public/symbols"
 
-ENDPOINT = {
-    # Public Endpoints
-    "TIME": "1/public/time",
-    "TICKER": "marketwatch/ticker",
-    "SYMBOLS": "instruments",
-    "ORDER_BOOK": "marketwatch/orderbook/{trading_pair}/150/2",
-    "ORDER_CREATE": "1/trading/new_order",
-    "ORDER_DELETE": "orders/cancel",
-    "ORDER_STATUS": "orders/list",
-    "USER_ORDERS": "orders/list",
-    "USER_BALANCES": "1/payment/accounts",
-}
+
+# private
+ENDPOINT_ACTIVE_ORDERS = "1/trading/orders/active"
+ENDPOINT_ORDER_CANCEL = "2/trading/cancel_order"
+ENDPONIT_CANCEL_ALL_ORDERS = "1/trading/cancel_orders"
+ENDPOINT_MY_TRADES = "1/trading/trades"
+ENDPOINT_CREATE_ORDER = "1/trading/new_order"
+ENDPOINT_ORDER_STATE = "1/trading/order"
+ENDPOINT_USER_BALANCES = "1/payment/accounts"
+
 
 API_REASONS = {
-    0: "Success",
-    10001: "Malformed request, (E.g. not using application/json for REST)",
-    10002: "Not authenticated, or key/signature incorrect",
-    10003: "IP address not whitelisted",
-    10004: "Missing required fields",
-    10005: "Disallowed based on user tier",
-    10006: "Requests have exceeded rate limits",
-    10007: "Nonce value differs by more than 30 seconds from server",
-    10008: "Invalid method specified",
-    10009: "Invalid date range",
-    20001: "Duplicated record",
-    20002: "Insufficient balance",
-    30003: "Invalid instrument_name specified",
-    30004: "Invalid side specified",
-    30005: "Invalid type specified",
-    30006: "Price is lower than the minimum",
-    30007: "Price is higher than the maximum",
-    30008: "Quantity is lower than the minimum",
-    30009: "Quantity is higher than the maximum",
-    30010: "Required argument is blank or missing",
-    30013: "Too many decimal places for Price",
-    30014: "Too many decimal places for Quantity",
-    30016: "The notional amount is less than the minimum",
-    30017: "The notional amount exceeds the maximum",
+    10: "Missing API key",
+    20: "Missing nonce",
+    30: "Missing signature",
+    40: "Missing Invalid API key",
+    50: "Nonce is not monotonous",
+    60: "Nonce is not Valid",
+    70: "Wrong signature",
+    80: "No permissions",
+    90: "API key is not enabled",
+    100: "API key locked",
+    110: "Invalid client state",
+    120: "Invalid API key state",
+    130: "Trading suspended",
+    140: "REST API suspended",
+    200: "Mandatory parameter missing",
 }
