@@ -39,6 +39,7 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
         self._listen_for_user_stream_task = None
         self._last_recv_time: float = 0
         self._seen_active_orders = {}
+        self._account_id = None
 
         super().__init__()
 
@@ -51,15 +52,23 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
         Subscribe to active orders via web socket
         """
         # implement here the polling mechanism
-        path = "2/trading/orders/active"
+        path = Constants.ENDPOINT_ACTIVE_ORDERS
         try:
-            async with aiohttp.ClientSession() as client:
-                while True:
-                    try:
-                        response = self._api_request(client, "get", path, {"account": globitex_utils.ACCOUNT_ID}, True)
+            while True:
+                try:
+                    async with aiohttp.ClientSession() as client:
+                        account = await self.get_account_id()
+                        response = await self._api_request(
+                            client=client,
+                            method="get",
+                            path_url=path,
+                            params={"account": account},
+                            is_auth_required=True,
+                        )
                         # async with client.get(path) as response:
                         #     response_data = await safe_gather(response.json())
                         orders = response["orders"]
+                        self._last_recv_time = time.time()
 
                         # first time we don't have a way to know which orders are new or not
                         if len(self._seen_active_orders) == 0:
@@ -72,14 +81,16 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
                                     # possible a new order
                                     self._seen_active_orders[order["id"]] = order
                                     yield order
-                                    self._last_recv_time = time.time()
 
                         await asyncio.sleep(1)
-                    except Exception:
-                        self.logger().network(
-                            "Error fetching active orders", exc_info=True, app_warning_msg=str(traceback.format_exc()),
-                        )
-                        await asyncio.sleep(5)
+                except Exception:
+                    error = traceback.format_exc()
+                    self.logger().network(
+                        error + "Error fetching active orders",
+                        exc_info=True,
+                        app_warning_msg=str(traceback.format_exc()),
+                    )
+                    await asyncio.sleep(5)
         except Exception as e:
             raise e
         finally:
@@ -94,25 +105,43 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
         :param output: an async queue where the incoming messages are stored
         """
 
-        # while True:
-        #     try:
-        #         async for msg in self._listen_to_orders_trades_balances():
-        #             output.put_nowait(msg)
-        #     except asyncio.CancelledError:
-        #         raise
-        #     except Exception:
-        #         self.logger().error(
-        #             "Unexpected error with Globitex WebSocket connection. " "Retrying after 30 seconds...",
-        #             exc_info=True,
-        #         )
-        #         await asyncio.sleep(30.0)
+        while True:
+            try:
+                async for msg in self._listen_to_orders_trades_balances():
+                    output.put_nowait(msg)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                error = traceback.format_exc()
+                self.logger().error(
+                    error + "Unexpected error with polling connection. " "Retrying after 30 seconds...", exc_info=True,
+                )
+                await asyncio.sleep(10.0)
 
-        # tmp disabling rest polling this side
-        raise NotImplementedError
+        # # tmp disabling rest polling this side
+        # raise NotImplementedError
+
+    # tmp duplicaded
+    async def get_account_id(self) -> str:
+        # fetch main account id, multi-account not supported yet
+        if not self._account_id:
+            # fetch account_id
+            async with aiohttp.ClientSession() as client:
+                response = await self._api_request(client, "get", Constants.ENDPOINT_USER_BALANCES, {}, True)
+                account_id = response["accounts"][0]["account"]
+                self._account_id = account_id
+                # tmp hack
+                globitex_utils.set_account_id(account_id)
+        return self._account_id
 
     #  tmp request via will be via rest (duplicataed for now)
     async def _api_request(
-        self, method: str, path_url: str, params: Dict[str, Any] = {}, is_auth_required: bool = False
+        self,
+        client,
+        method: str,
+        path_url: str,
+        params: Optional[Dict[str, Any]] = None,
+        is_auth_required: bool = False,
     ) -> Dict[str, Any]:
         """
         Sends an aiohttp request and waits for a response.
@@ -123,20 +152,23 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
         :returns A response in json format.
         """
         url = f"{Constants.REST_URL}/{path_url}"
-        client = await self._http_client()
+
+        if not params:
+            params = {}
+
+        # client = await self._http_client()
         if is_auth_required:
+            nonce = globitex_utils.get_ms_timestamp()
             request_id = globitex_utils.RequestId.generate_request_id()
-            data = {"params": params}
-            headers, params = self._globitex_auth.generate_auth_tuple(
-                path_url, request_id, globitex_utils.get_ms_timestamp(), data
-            )
+            # data = {"params": params}
+            headers, auth_params = self._globitex_auth.generate_auth_tuple(path_url, request_id, nonce, params)
             # headers = self._globitex_auth.get_headers()
         else:
             headers = {"Content-Type": "application/json"}
 
         if method == "get":
-            response = await client.get(url, headers=headers)
-            print("Response:", response._body)
+
+            response = await client.get(url=url, params=params, headers=headers)
         elif method == "post":
             post_json = json.dumps(params)
             response = await client.post(url, data=post_json, headers=headers)
@@ -144,7 +176,8 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
             raise NotImplementedError
 
         try:
-            parsed_response = json.loads(await response.text())
+            loaded_Response = await response.text()
+            parsed_response = json.loads(loaded_Response)
         except Exception as e:
             raise IOError(f"Error parsing data from {url}. Error: {str(e)}")
         if response.status != 200:
