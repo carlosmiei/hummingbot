@@ -222,7 +222,7 @@ class GlobitexExchange(ExchangeBase):
         """
         try:
             # since there is no ping endpoint, the lowest rate call is to get BTC-USDT ticker
-            await self._api_request("get", Constants.ENDPOINT["TIME"])
+            await self._api_request("get", Constants.ENDPOINT_TIME)
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -256,7 +256,7 @@ class GlobitexExchange(ExchangeBase):
                 await asyncio.sleep(0.5)
 
     async def _update_trading_rules(self):
-        instruments_info = await self._api_request("get", Constants.ENDPOINT["SYMBOLS"])
+        instruments_info = await self._api_request("get", Constants.ENDPOINT_SYMBOLS)
         self._trading_rules.clear()
         self._trading_rules = self._format_trading_rules(instruments_info)
 
@@ -301,22 +301,22 @@ class GlobitexExchange(ExchangeBase):
         signature to the request.
         :returns A response in json format.
         """
+        if not params:
+            params = {}
+
         url = f"{Constants.REST_URL}/{path_url}"
         client = await self._http_client()
         if is_auth_required:
+            nonce = globitex_utils.get_ms_timestamp()
             request_id = globitex_utils.RequestId.generate_request_id()
-            data = {"params": params}
-            headers, params = self._globitex_auth.generate_auth_tuple(
-                path_url, request_id, globitex_utils.get_ms_timestamp(), data
-            )
-            # headers = self._globitex_auth.get_headers()
+            headers, auth_params = self._globitex_auth.generate_auth_tuple(path_url, request_id, nonce, params)
         else:
             headers = {"Content-Type": "application/json"}
 
         if method == "get":
             response = await client.get(url, headers=headers)
         elif method == "post":
-            post_json = json.dumps(params)
+            post_json = params
             response = await client.post(url, data=post_json, headers=headers)
         else:
             raise NotImplementedError
@@ -420,23 +420,29 @@ class GlobitexExchange(ExchangeBase):
             raise ValueError(
                 f"Buy order amount {amount} is lower than the minimum order size " f"{trading_rule.min_order_size}."
             )
-        api_params = {
-            "symbol": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
-            "side": trade_type.name,
-            "type": "limit",
-            "price": f"{price:f}",
-            "quantity": f"{amount:f}",
-            "clientOrderId": order_id,
-        }
-        # check this inhere what makes a maker order?
 
-        # if order_type is OrderType.LIMIT_MAKER:
-        #     api_params["exec_inst"] = "POST_ONLY"
+        account_id = await self.get_account_id()
+        api_params = {
+            "account": account_id,
+            "clientOrderId": order_id,
+            "side": trade_type.name,
+            "symbol": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
+            "type": "limit",
+            "price": "{price:f}",
+            "quantity": f"{amount:f}",
+        }
+
         self.start_tracking_order(order_id, None, trading_pair, trade_type, price, amount, order_type)
         try:
-            order_result = await self._api_request("post", Constants.ENDPOINT["ORDER_CREATE"], api_params, True)
-            exchange_order_id = str(order_result["ExecutionReport"]["orderId"])
+            order_result = await self._api_request("post", Constants.ENDPOINT_CREATE_ORDER, api_params, True)
+            order_result = order_result["ExecutionReport"]
+            exchange_order_id = str(order_result["orderId"])
             tracked_order = self._in_flight_orders.get(order_id)
+
+            # that means order failed [confirm this]
+            if "orderRejectReason" in order_result:
+                raise Exception("Order Failed!:" + order_result["orderRejectReason"])
+
             if tracked_order is not None:
                 self.logger().info(
                     f"Created {order_type.name} {trade_type.name} order {order_id} for " f"{amount} {trading_pair}."
@@ -510,7 +516,7 @@ class GlobitexExchange(ExchangeBase):
             ex_order_id = tracked_order.exchange_order_id
             await self._api_request(
                 "post",
-                "private/2/trading/cancel_order",
+                Constants.ENDPOINT_ORDER_CANCEL,
                 {
                     # "instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
                     "account": self.get_account_id(),
@@ -560,7 +566,7 @@ class GlobitexExchange(ExchangeBase):
         """
         local_asset_names = set(self._account_balances.keys())
         remote_asset_names = set()
-        account_info = await self._api_request("get", "1/payment/accounts", {}, True)
+        account_info = await self._api_request("get", Constants.ENDPOINT_USER_BALANCES, {}, True)
         # multi account not supported for now
         balances = account_info["accounts"][0]["balance"]
         for account in balances:
@@ -591,14 +597,17 @@ class GlobitexExchange(ExchangeBase):
 
                 trades_task = self._api_request(
                     "get",
-                    "/api/1/trading/trades",
+                    Constants.ENDPOINT_MY_TRADES,
                     {"account": self.get_account_id, "maxResults": 1000, "startIndex": 0, "by": "trade_id"},
                     True,
                 )
                 tasks.append(trades_task)
                 tasks.append(
                     self._api_request(
-                        "get", "1/trading/order", {"clientOrderId": order_id, "account": self.get_account_id()}, True
+                        "get",
+                        Constants.ENDPOINT_ORDER_STATE,
+                        {"clientOrderId": order_id, "account": self.get_account_id()},
+                        True,
                     )
                 )
             self.logger().debug(f"Polling for order status updates of {len(tasks)} orders.")
@@ -728,7 +737,7 @@ class GlobitexExchange(ExchangeBase):
             for trading_pair in self._trading_pairs:
                 await self._api_request(
                     "post",
-                    "1/trading/cancel_orders",
+                    Constants.ENDPONIT_CANCEL_ALL_ORDERS,
                     {
                         "symbols": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
                         "account": self.get_account_id(),
@@ -835,10 +844,12 @@ class GlobitexExchange(ExchangeBase):
         raise NotImplementedError
 
     async def get_open_orders(self) -> List[OpenOrder]:
-        result = await self._api_request("get", "2/trading/orders/active", {"account": self.get_account_id()}, True)
+        result = await self._api_request(
+            "get", Constants.ENDPOINT_ACTIVE_ORDERS, {"account": self.get_account_id()}, True
+        )
         ret_val = []
         for order in result["orders"]:
-            if globitex_utils.HBOT_BROKER_ID not in order["client_oid"]:  # what is this??
+            if globitex_utils.HBOT_BROKER_ID not in order["clientOrderId"]:
                 continue
             if order["type"] != "limit":
                 raise Exception(f"Unsupported order type {order['type']}")
@@ -862,7 +873,7 @@ class GlobitexExchange(ExchangeBase):
         # fetch main account id, multi-account not supported yet
         if not self._account_id:
             # fetch account_id
-            response = await self._api_request("get", "1/payment/accounts", True)
+            response = await self._api_request("get", Constants.ENDPOINT_USER_BALANCES, {}, True)
             account_id = response["accounts"][0]["account"]
             self._account_id = account_id
             # tmp hack
