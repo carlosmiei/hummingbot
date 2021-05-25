@@ -589,7 +589,7 @@ class GlobitexExchange(ExchangeBase):
         last_tick = int(self._last_poll_timestamp / self.UPDATE_ORDER_STATUS_MIN_INTERVAL)
         current_tick = int(self.current_timestamp / self.UPDATE_ORDER_STATUS_MIN_INTERVAL)
 
-        if True or current_tick > last_tick and len(self._in_flight_orders) > 0:
+        if current_tick > last_tick and len(self._in_flight_orders) > 0:
             tracked_orders = list(self._in_flight_orders.values())
             tasks = []
             for tracked_order in tracked_orders:
@@ -613,6 +613,9 @@ class GlobitexExchange(ExchangeBase):
             self.logger().debug(f"Polling for order status updates of {len(tasks)} orders.")
             responses = await safe_gather(*tasks, return_exceptions=True)
 
+            if len(responses) == 0:
+                # how should we "Fail" here?
+                return
             trades_response = responses[0]["trades"]
             orders_response = responses[1:]
 
@@ -849,19 +852,20 @@ class GlobitexExchange(ExchangeBase):
         for order in result["orders"]:
             if globitex_utils.HBOT_BROKER_ID not in order["clientOrderId"]:
                 continue
-            if order["type"] != "limit":
+            if order["type"] != "limit" and order["type"] != "stopLimit":
                 raise Exception(f"Unsupported order type {order['type']}")
+
             ret_val.append(
                 OpenOrder(
-                    client_order_id=order["clientOrderId"],  # check this id
+                    client_order_id=order["clientOrderId"],
                     trading_pair=globitex_utils.convert_from_exchange_trading_pair(order["symbol"]),
-                    price=Decimal(str(order["orderPrice"])),
+                    price=Decimal(str(order["avgPrice"])),
                     amount=Decimal(str(order["orderQuantity"])),
                     executed_amount=Decimal(str(order["cumQuantity"])),
-                    # status=order["status"], status not in the API check later
+                    status=order["orderStatus"],
                     order_type=OrderType.LIMIT,
                     is_buy=True if order["side"].lower() == "buy" else False,
-                    time=int(order["lastTimestamp"]),  # not sure if is the correct param
+                    time=int(order["lastTimestamp"]),
                     exchange_order_id=order["orderId"],
                 )
             )
