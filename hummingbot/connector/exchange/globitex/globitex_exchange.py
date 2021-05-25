@@ -589,16 +589,16 @@ class GlobitexExchange(ExchangeBase):
         last_tick = int(self._last_poll_timestamp / self.UPDATE_ORDER_STATUS_MIN_INTERVAL)
         current_tick = int(self.current_timestamp / self.UPDATE_ORDER_STATUS_MIN_INTERVAL)
 
-        if current_tick > last_tick and len(self._in_flight_orders) > 0:
+        if True or current_tick > last_tick and len(self._in_flight_orders) > 0:
             tracked_orders = list(self._in_flight_orders.values())
             tasks = []
             for tracked_order in tracked_orders:
-                order_id = await tracked_order.get_exchange_order_id()
+                order_id = tracked_order
 
                 trades_task = self._api_request(
                     "get",
                     Constants.ENDPOINT_MY_TRADES,
-                    {"account": self.get_account_id, "maxResults": 1000, "startIndex": 0, "by": "trade_id"},
+                    {"account": self.get_account_id(), "maxResults": 1000, "startIndex": 0, "by": "trade_id"},
                     True,
                 )
                 tasks.append(trades_task)
@@ -612,8 +612,8 @@ class GlobitexExchange(ExchangeBase):
                 )
             self.logger().debug(f"Polling for order status updates of {len(tasks)} orders.")
             responses = await safe_gather(*tasks, return_exceptions=True)
+
             trades_response = responses[0]["trades"]
-            # trades_dict = {trade["id"]: trade for trade in trades_response}
             orders_response = responses[1:]
 
             for response in orders_response:
@@ -622,11 +622,9 @@ class GlobitexExchange(ExchangeBase):
                 if "orders" not in response:
                     self.logger().info(f"_update_order_status result not in resp: {response}")
                     continue
-                result = response["orders"]
+                result = response["orders"][0]
                 # match trades with the same clientOrderId
-                order_trades = [
-                    trade for trade in trades_response if trade["originalOrderId"] == response["clientOrderId"]
-                ]
+                order_trades = [trade for trade in trades_response if trade["clientOrderId"] == result["clientOrderId"]]
                 if len(order_trades) > 0:
                     for trade_msg in order_trades:
                         await self._process_trade_message(trade_msg)
@@ -637,7 +635,7 @@ class GlobitexExchange(ExchangeBase):
         Updates in-flight order and triggers cancellation or failure event if needed.
         :param order_msg: The order response from either REST or web socket API (they are of the same format)
         """
-        client_order_id = order_msg["orderId"]  # check this later, is this or the clientOrderId above??
+        client_order_id = order_msg["clientOrderId"]
         if client_order_id not in self._in_flight_orders:
             return
         tracked_order = self._in_flight_orders[client_order_id]
