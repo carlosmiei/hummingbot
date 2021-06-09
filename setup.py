@@ -17,6 +17,9 @@ if is_posix:
     else:
         os.environ["CFLAGS"] = "-std=c++11"
 
+if os.environ.get('WITHOUT_CYTHON_OPTIMIZATIONS'):
+    os.environ["CFLAGS"] += " -O0"
+
 
 # Avoid a gcc warning below:
 # cc1plus: warning: command line option ‘-Wstrict-prototypes’ is valid
@@ -30,7 +33,7 @@ class BuildExt(build_ext):
 
 def main():
     cpu_count = os.cpu_count() or 8
-    version = "20210406"
+    version = "20210518"
     packages = [
         "hummingbot",
         "hummingbot.client",
@@ -72,6 +75,7 @@ def main():
         "hummingbot.connector.exchange.beaxy",
         "hummingbot.connector.exchange.hitbtc",
         "hummingbot.connector.exchange.globitex",
+        "hummingbot.connector.exchange.k2",
         "hummingbot.connector.derivative",
         "hummingbot.connector.derivative.binance_perpetual",
         "hummingbot.script",
@@ -131,7 +135,7 @@ def main():
         "attrs",
         "certifi",
         "chardet",
-        "cython==0.29.15",
+        "cython==0.29.23",
         "idna",
         "idna_ssl",
         "multidict",
@@ -150,6 +154,14 @@ def main():
         "language_level": 3,
     }
 
+    if os.environ.get('WITHOUT_CYTHON_OPTIMIZATIONS'):
+        compiler_directives = {
+            "optimize.use_switch": False,
+            "optimize.unpack_method_calls": False,
+        }
+    else:
+        compiler_directives = {}
+
     if is_posix:
         cython_kwargs["nthreads"] = cpu_count
 
@@ -161,22 +173,26 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "build_ext" and is_posix:
         sys.argv.append(f"--parallel={cpu_count}")
 
-    setup(
-        name="hummingbot",
-        version=version,
-        description="Hummingbot",
-        url="https://github.com/CoinAlpha/hummingbot",
-        author="CoinAlpha, Inc.",
-        author_email="dev@hummingbot.io",
-        license="Apache 2.0",
-        packages=packages,
-        package_data=package_data,
-        install_requires=install_requires,
-        ext_modules=cythonize(["hummingbot/**/*.pyx"], **cython_kwargs),
-        include_dirs=[np.get_include()],
-        scripts=["bin/hummingbot.py", "bin/hummingbot_quickstart.py"],
-        cmdclass={"build_ext": BuildExt},
-    )
+    setup(name="hummingbot",
+          version=version,
+          description="Hummingbot",
+          url="https://github.com/CoinAlpha/hummingbot",
+          author="CoinAlpha, Inc.",
+          author_email="dev@hummingbot.io",
+          license="Apache 2.0",
+          packages=packages,
+          package_data=package_data,
+          install_requires=install_requires,
+          ext_modules=cythonize(["hummingbot/**/*.pyx"], compiler_directives=compiler_directives, **cython_kwargs),
+          include_dirs=[
+              np.get_include()
+          ],
+          scripts=[
+              "bin/hummingbot.py",
+              "bin/hummingbot_quickstart.py"
+          ],
+          cmdclass={'build_ext': BuildExt},
+          )
 
 
 if __name__ == "__main__":
