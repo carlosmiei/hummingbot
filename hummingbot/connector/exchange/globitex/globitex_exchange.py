@@ -519,7 +519,7 @@ class GlobitexExchange(ExchangeBase):
                 Constants.ENDPOINT_ORDER_CANCEL,
                 {
                     # "instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
-                    "account": self.get_account_id(),
+                    "account": await self.get_account_id(),
                     "clientOrderId": ex_order_id,
                 },
                 True,
@@ -598,7 +598,7 @@ class GlobitexExchange(ExchangeBase):
                 trades_task = self._api_request(
                     "get",
                     Constants.ENDPOINT_MY_TRADES,
-                    {"account": self.get_account_id(), "maxResults": 1000, "startIndex": 0, "by": "trade_id"},
+                    {"account": await self.get_account_id(), "maxResults": 1000, "startIndex": 0, "by": "trade_id"},
                     True,
                 )
                 tasks.append(trades_task)
@@ -606,7 +606,7 @@ class GlobitexExchange(ExchangeBase):
                     self._api_request(
                         "get",
                         Constants.ENDPOINT_ORDER_STATE,
-                        {"clientOrderId": order_id, "account": self.get_account_id()},
+                        {"clientOrderId": order_id, "account": await self.get_account_id()},
                         True,
                     )
                 )
@@ -740,8 +740,8 @@ class GlobitexExchange(ExchangeBase):
                     "post",
                     Constants.ENDPONIT_CANCEL_ALL_ORDERS,
                     {
+                        "account": await self.get_account_id(),
                         "symbols": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
-                        "account": self.get_account_id(),
                     },
                     True,
                 )
@@ -846,7 +846,7 @@ class GlobitexExchange(ExchangeBase):
 
     async def get_open_orders(self) -> List[OpenOrder]:
         result = await self._api_request(
-            "get", Constants.ENDPOINT_ACTIVE_ORDERS, {"account": self.get_account_id()}, True
+            "get", Constants.ENDPOINT_ACTIVE_ORDERS, {"account": await self.get_account_id()}, True
         )
         ret_val = []
         for order in result["orders"]:
