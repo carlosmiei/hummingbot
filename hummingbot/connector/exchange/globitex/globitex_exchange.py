@@ -314,7 +314,10 @@ class GlobitexExchange(ExchangeBase):
             headers = {"Content-Type": "application/json"}
 
         if method == "get":
-            response = await client.get(url, headers=headers)
+            if len(params) > 0:
+                response = await client.get(url, params=params, headers=headers)
+            else:
+                response = await client.get(url, headers=headers)
         elif method == "post":
             post_json = params
             response = await client.post(url, data=post_json, headers=headers)
