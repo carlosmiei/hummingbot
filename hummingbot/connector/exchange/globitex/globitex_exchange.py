@@ -339,7 +339,7 @@ class GlobitexExchange(ExchangeBase):
         Returns a price step, a minimum price increment for a given trading pair.
         """
         trading_rule = self._trading_rules[trading_pair]
-        return trading_rule.min_price_increment
+        return Decimal(trading_rule.min_price_increment)
 
     def get_order_size_quantum(self, trading_pair: str, order_size: Decimal):
         """
@@ -428,13 +428,12 @@ class GlobitexExchange(ExchangeBase):
         api_params = {
             "account": account_id,
             "clientOrderId": order_id,
-            "side": trade_type.name,
+            "side": trade_type.name.lower(),
             "symbol": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
             "type": "limit",
-            "price": "{price:f}",
+            "price": f"{price:f}",
             "quantity": f"{amount:f}",
         }
-
         self.start_tracking_order(order_id, None, trading_pair, trade_type, price, amount, order_type)
         try:
             order_result = await self._api_request("post", Constants.ENDPOINT_CREATE_ORDER, api_params, True)
