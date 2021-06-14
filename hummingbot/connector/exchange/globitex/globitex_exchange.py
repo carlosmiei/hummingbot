@@ -596,8 +596,7 @@ class GlobitexExchange(ExchangeBase):
             tracked_orders = list(self._in_flight_orders.values())
             tasks = []
             for tracked_order in tracked_orders:
-                order_id = tracked_order
-
+                order_id = await tracked_order.get_exchange_order_id()
                 trades_task = self._api_request(
                     "get",
                     Constants.ENDPOINT_MY_TRADES,
