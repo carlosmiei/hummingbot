@@ -72,14 +72,14 @@ class GlobitexAPIUserStreamDataSource(UserStreamTrackerDataSource):
 
                         # first time we don't have a way to know which orders are new or not
                         if len(self._seen_active_orders) == 0:
-                            self._seen_active_orders = {order["id"]: order for order in orders}
+                            self._seen_active_orders = {order["orderId"]: order for order in orders}
                             continue
                         else:
                             # we have to find the new order between stored and received and yield
                             for order in orders:
-                                if order["id"] not in self._seen_active_orders:
+                                if order["orderId"] not in self._seen_active_orders:
                                     # possible a new order
-                                    self._seen_active_orders[order["id"]] = order
+                                    self._seen_active_orders[order["orderId"]] = order
                                     yield order
 
                         await asyncio.sleep(1)
