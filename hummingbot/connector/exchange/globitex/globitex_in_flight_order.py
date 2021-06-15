@@ -55,14 +55,14 @@ class GlobitexInFlightOrder(InFlightOrderBase):
         :return: formatted InFlightOrder
         """
         retval = GlobitexInFlightOrder(
-            data["clientOrderId"],
-            data["orderId"],
-            data["symbol"],
-            getattr(OrderType, data["type"]),
-            getattr(TradeType, data["side"]),
-            Decimal(data["orderPrice"]),
-            Decimal(data["orderQuantity"]),
-            data["orderStatus"],
+            data["client_order_id"],
+            data["exchange_order_id"],
+            data["trading_pair"],
+            getattr(OrderType, data["order_type"]),
+            getattr(TradeType, data["trade_type"]),
+            Decimal(data["price"]),
+            Decimal(data["amount"]),
+            data["last_state"],
         )
         # Check if these values are available or not
         # retval.executed_amount_base = Decimal(data["executed_amount_base"])
