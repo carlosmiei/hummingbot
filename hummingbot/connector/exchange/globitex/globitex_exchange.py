@@ -7,15 +7,11 @@ from typing import (
     List,
     Optional,
     Any,
-    AsyncIterable,
 )
 from decimal import Decimal
 import asyncio
 import aiohttp
 import math
-import time
-
-# from websockets import auth
 
 from hummingbot.core.network_iterator import NetworkStatus
 from hummingbot.logger import HummingbotLogger
@@ -40,7 +36,8 @@ from hummingbot.core.event.events import (
 )
 from hummingbot.connector.exchange_base import ExchangeBase
 from hummingbot.connector.exchange.globitex.globitex_order_book_tracker import GlobitexOrderBookTracker
-from hummingbot.connector.exchange.globitex.globitex_user_stream_tracker import GlobitexUserStreamTracker
+
+# from hummingbot.connector.exchange.globitex.globitex_user_stream_tracker import GlobitexUserStreamTracker
 from hummingbot.connector.exchange.globitex.globitex_auth import GlobitexAuth
 from hummingbot.connector.exchange.globitex.globitex_in_flight_order import GlobitexInFlightOrder
 from hummingbot.connector.exchange.globitex import globitex_utils
@@ -89,7 +86,7 @@ class GlobitexExchange(ExchangeBase):
         self._trading_pairs = trading_pairs
         self._globitex_auth = GlobitexAuth(globitex_api_key, globitex_secret_key)
         self._order_book_tracker = GlobitexOrderBookTracker(trading_pairs=trading_pairs)
-        self._user_stream_tracker = GlobitexUserStreamTracker(self._globitex_auth, trading_pairs)
+        # self._user_stream_tracker = GlobitexUserStreamTracker(self._globitex_auth, trading_pairs) using REST POLLING INSTEAD
         self._ev_loop = asyncio.get_event_loop()
         self._shared_client = None
         self._poll_notifier = asyncio.Event()
@@ -127,10 +124,9 @@ class GlobitexExchange(ExchangeBase):
         return {
             "order_books_initialized": self._order_book_tracker.ready,
             "account_balance": len(self._account_balances) > 0 if self._trading_required else True,
-            "trading_rule_initialized": len(self._trading_rules) > 0,
-            "user_stream_initialized": self._user_stream_tracker.data_source.last_recv_time > 0
-            if self._trading_required
-            else True,
+            "trading_rule_initialized": len(self._trading_rules) > 0
+            # "user_stream_initialized": self._user_stream_tracker.data_source.last_recv_time > 0
+            if self._trading_required else True,
         }
 
     @property
@@ -191,8 +187,8 @@ class GlobitexExchange(ExchangeBase):
         self._trading_rules_polling_task = safe_ensure_future(self._trading_rules_polling_loop())
         if self._trading_required:
             self._status_polling_task = safe_ensure_future(self._status_polling_loop())
-            self._user_stream_tracker_task = safe_ensure_future(self._user_stream_tracker.start())
-            self._user_stream_event_listener_task = safe_ensure_future(self._user_stream_event_listener())
+            # self._user_stream_tracker_task = safe_ensure_future(self._user_stream_tracker.start())
+            # self._user_stream_event_listener_task = safe_ensure_future(self._user_stream_event_listener())
 
     async def stop_network(self):
         """
@@ -208,12 +204,12 @@ class GlobitexExchange(ExchangeBase):
         if self._status_polling_task is not None:
             self._status_polling_task.cancel()
             self._status_polling_task = None
-        if self._user_stream_tracker_task is not None:
-            self._user_stream_tracker_task.cancel()
-            self._user_stream_tracker_task = None
-        if self._user_stream_event_listener_task is not None:
-            self._user_stream_event_listener_task.cancel()
-            self._user_stream_event_listener_task = None
+        # if self._user_stream_tracker_task is not None:
+        #     self._user_stream_tracker_task.cancel()
+        #     self._user_stream_tracker_task = None
+        # if self._user_stream_event_listener_task is not None:
+        #     self._user_stream_event_listener_task.cancel()
+        #     self._user_stream_event_listener_task = None
 
     async def check_network(self) -> NetworkStatus:
         """
@@ -329,6 +325,12 @@ class GlobitexExchange(ExchangeBase):
         except Exception as e:
             raise IOError(f"Error parsing data from {url}. Error: {str(e)}")
         if response.status != 200:
+            if response.status == 403:
+                raise IOError(
+                    f"Error fetching data from {url}. HTTP status is {response.status}. "
+                    f"Message: {parsed_response}"
+                    f"Nonce:{nonce}"
+                )
             raise IOError(
                 f"Error fetching data from {url}. HTTP status is {response.status}. " f"Message: {parsed_response}"
             )
@@ -594,15 +596,15 @@ class GlobitexExchange(ExchangeBase):
         if current_tick > last_tick and len(self._in_flight_orders) > 0:
             tracked_orders = list(self._in_flight_orders.values())
             tasks = []
+            trades_task = self._api_request(
+                "get",
+                Constants.ENDPOINT_MY_TRADES,
+                {"account": await self.get_account_id(), "maxResults": 1000, "startIndex": 0, "by": "trade_id"},
+                True,
+            )
+            tasks.append(trades_task)
             for tracked_order in tracked_orders:
                 order_id = await tracked_order.get_exchange_order_id()
-                trades_task = self._api_request(
-                    "get",
-                    Constants.ENDPOINT_MY_TRADES,
-                    {"account": await self.get_account_id(), "maxResults": 1000, "startIndex": 0, "by": "trade_id"},
-                    True,
-                )
-                tasks.append(trades_task)
                 tasks.append(
                     self._api_request(
                         "get",
@@ -695,7 +697,7 @@ class GlobitexExchange(ExchangeBase):
             math.isclose(tracked_order.executed_amount_base, tracked_order.amount)
             or tracked_order.executed_amount_base >= tracked_order.amount
         ):
-            tracked_order.last_state = "FILLED"
+            tracked_order.last_state = "filled"
             self.logger().info(
                 f"The {tracked_order.trade_type.name} order "
                 f"{tracked_order.client_order_id} has completed "
@@ -769,10 +771,11 @@ class GlobitexExchange(ExchangeBase):
         Is called automatically by the clock for each clock's tick (1 second by default).
         It checks if status polling task is due for execution.
         """
-        now = time.time()
+        # now = time.time()
         poll_interval = (
             self.SHORT_POLL_INTERVAL
-            if now - self._user_stream_tracker.last_recv_time > 60.0
+            if False
+            # if now - self._user_stream_tracker.last_recv_time > 60.0
             else self.LONG_POLL_INTERVAL
         )
         last_tick = int(self._last_timestamp / poll_interval)
@@ -799,51 +802,51 @@ class GlobitexExchange(ExchangeBase):
         is_maker = order_type is OrderType.LIMIT_MAKER
         return TradeFee(percent=self.estimate_fee_pct(is_maker))
 
-    async def _iter_user_event_queue(self) -> AsyncIterable[Dict[str, any]]:
-        while True:
-            try:
-                yield await self._user_stream_tracker.user_stream.get()
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                self.logger().network(
-                    "Unknown error. Retrying after 1 seconds.",
-                    exc_info=True,
-                    app_warning_msg="Could not fetch user events from Globitex. Check API key and network connection.",
-                )
-                await asyncio.sleep(1.0)
+    # async def _iter_user_event_queue(self) -> AsyncIterable[Dict[str, any]]:
+    #     while True:
+    #         try:
+    #             yield await self._user_stream_tracker.user_stream.get()
+    #         except asyncio.CancelledError:
+    #             raise
+    #         except Exception:
+    #             self.logger().network(
+    #                 "Unknown error. Retrying after 1 seconds.",
+    #                 exc_info=True,
+    #                 app_warning_msg="Could not fetch user events from Globitex. Check API key and network connection.",
+    #             )
+    #             await asyncio.sleep(1.0)
 
-    async def _user_stream_event_listener(self):
-        """
-        Listens to message in _user_stream_tracker.user_stream queue. The messages are put in by
-        GlobitexAPIUserStreamDataSource.
-        we should disable this
-        """
-        # async for event_message in self._iter_user_event_queue():
-        #     try:
-        #         if "result" not in event_message or "channel" not in event_message["result"]:
-        #             continue
-        #         channel = event_message["result"]["channel"]
-        #         if "user.trade" in channel:
-        #             for trade_msg in event_message["result"]["data"]:
-        #                 await self._process_trade_message(trade_msg)
-        #         elif "user.order" in channel:
-        #             for order_msg in event_message["result"]["data"]:
-        #                 self._process_order_message(order_msg)
-        #         elif channel == "user.balance":
-        #             balances = event_message["result"]["data"]
-        #             for balance_entry in balances:
-        #                 asset_name = balance_entry["currency"]
-        #                 self._account_balances[asset_name] = Decimal(str(balance_entry["balance"]))
-        #                 self._account_available_balances[asset_name] = Decimal(str(balance_entry["available"]))
-        #     except asyncio.CancelledError:
-        #         raise
-        #     except Exception:
-        #         self.logger().error("Unexpected error in user stream listener loop.", exc_info=True)
-        #         await asyncio.sleep(5.0)exchange_order_id
+    # async def _user_stream_event_listener(self):
+    #     """
+    #     Listens to message in _user_stream_tracker.user_stream queue. The messages are put in by
+    #     GlobitexAPIUserStreamDataSource.
+    #     we should disable this
+    #     """
+    #     # async for event_message in self._iter_user_event_queue():
+    #     #     try:
+    #     #         if "result" not in event_message or "channel" not in event_message["result"]:
+    #     #             continue
+    #     #         channel = event_message["result"]["channel"]
+    #     #         if "user.trade" in channel:
+    #     #             for trade_msg in event_message["result"]["data"]:
+    #     #                 await self._process_trade_message(trade_msg)
+    #     #         elif "user.order" in channel:
+    #     #             for order_msg in event_message["result"]["data"]:
+    #     #                 self._process_order_message(order_msg)
+    #     #         elif channel == "user.balance":
+    #     #             balances = event_message["result"]["data"]
+    #     #             for balance_entry in balances:
+    #     #                 asset_name = balance_entry["currency"]
+    #     #                 self._account_balances[asset_name] = Decimal(str(balance_entry["balance"]))
+    #     #                 self._account_available_balances[asset_name] = Decimal(str(balance_entry["available"]))
+    #     #     except asyncio.CancelledError:
+    #     #         raise
+    #     #     except Exception:
+    #     #         self.logger().error("Unexpected error in user stream listener loop.", exc_info=True)
+    #     #         await asyncio.sleep(5.0)exchange_order_id
 
-        # tmp disable websockets related stuff
-        raise NotImplementedError
+    #     # tmp disable websockets related stuff
+    #     raise NotImplementedError
 
     async def get_open_orders(self) -> List[OpenOrder]:
         result = await self._api_request(

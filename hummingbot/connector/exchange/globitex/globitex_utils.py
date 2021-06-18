@@ -2,7 +2,7 @@ import math
 import json
 from typing import Dict, List, Any
 
-from hummingbot.core.utils.tracking_nonce import get_tracking_nonce, get_tracking_nonce_low_res
+from hummingbot.core.utils.tracking_nonce import get_tracking_nonce  # , get_tracking_nonce_low_res
 from . import globitex_constants as Constants
 
 from hummingbot.client.config.config_var import ConfigVar
@@ -40,7 +40,7 @@ def join_paths(*paths: List[str]) -> str:
 
 # get timestamp in milliseconds
 def get_ms_timestamp() -> int:
-    return get_tracking_nonce_low_res()
+    return get_tracking_nonce()
 
 
 # convert milliseconds timestamp to seconds
