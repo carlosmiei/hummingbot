@@ -604,12 +604,11 @@ class GlobitexExchange(ExchangeBase):
             )
             tasks.append(trades_task)
             for tracked_order in tracked_orders:
-                order_id = await tracked_order.get_exchange_order_id()
                 tasks.append(
                     self._api_request(
                         "get",
                         Constants.ENDPOINT_ORDER_STATE,
-                        {"clientOrderId": order_id, "account": await self.get_account_id()},
+                        {"clientOrderId": tracked_order.client_order_id, "account": await self.get_account_id()},
                         True,
                     )
                 )
