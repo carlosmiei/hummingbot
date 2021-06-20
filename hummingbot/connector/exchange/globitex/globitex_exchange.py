@@ -636,6 +636,9 @@ class GlobitexExchange(ExchangeBase):
                 order_trades = [trade for trade in trades_response if trade["clientOrderId"] == result["clientOrderId"]]
                 if len(order_trades) > 0:
                     for trade_msg in order_trades:
+                        # avoid problems comparing str and ints
+                        trade_msg["originalOrderId"] = str(trade_msg["originalOrderId"])
+                        trade_msg["tradeId"] = str(trade_msg["tradeId"])
                         await self._process_trade_message(trade_msg)
                 self._process_order_message(result)
 
