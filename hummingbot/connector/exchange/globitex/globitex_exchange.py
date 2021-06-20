@@ -279,8 +279,12 @@ class GlobitexExchange(ExchangeBase):
                 trading_pair = globitex_utils.convert_from_exchange_trading_pair(rule["symbol"])
                 price_step = Decimal(rule["priceIncrement"])
                 quantity_step = Decimal(rule["sizeIncrement"])
+                size_min = Decimal(rule["sizeMin"])
                 result[trading_pair] = TradingRule(
-                    trading_pair, min_price_increment=price_step, min_base_amount_increment=quantity_step
+                    trading_pair,
+                    min_price_increment=price_step,
+                    min_base_amount_increment=quantity_step,
+                    min_order_size=size_min,
                 )
             except Exception:
                 self.logger().error(f"Error parsing the trading pair rule {rule}. Skipping.", exc_info=True)
@@ -515,16 +519,16 @@ class GlobitexExchange(ExchangeBase):
             tracked_order = self._in_flight_orders.get(order_id)
             if tracked_order is None:
                 raise ValueError(f"Failed to cancel order - {order_id}. Order not found.")
-            if tracked_order.exchange_order_id is None:
-                await tracked_order.get_exchange_order_id()
-            ex_order_id = tracked_order.exchange_order_id
+            # if tracked_order.exchange_order_id is None:
+            #     await tracked_order.get_exchange_order_id()
+            # ex_order_id = tracked_order.exchange_order_id
             await self._api_request(
                 "post",
                 Constants.ENDPOINT_ORDER_CANCEL,
                 {
                     # "instrument_name": globitex_utils.convert_to_exchange_trading_pair(trading_pair),
                     "account": await self.get_account_id(),
-                    "clientOrderId": ex_order_id,
+                    "clientOrderId": tracked_order.client_order_id,
                 },
                 True,
             )
@@ -596,7 +600,7 @@ class GlobitexExchange(ExchangeBase):
         if current_tick > last_tick and len(self._in_flight_orders) > 0:
             tracked_orders = list(self._in_flight_orders.values())
             tasks = []
-            trades_task = self._api_request(
+            trades_task = await self._api_request(
                 "get",
                 Constants.ENDPOINT_MY_TRADES,
                 {"account": await self.get_account_id(), "maxResults": 1000, "startIndex": 0, "by": "trade_id"},
@@ -605,7 +609,7 @@ class GlobitexExchange(ExchangeBase):
             tasks.append(trades_task)
             for tracked_order in tracked_orders:
                 tasks.append(
-                    self._api_request(
+                    await self._api_request(
                         "get",
                         Constants.ENDPOINT_ORDER_STATE,
                         {"clientOrderId": tracked_order.client_order_id, "account": await self.get_account_id()},
@@ -613,8 +617,8 @@ class GlobitexExchange(ExchangeBase):
                     )
                 )
             self.logger().debug(f"Polling for order status updates of {len(tasks)} orders.")
-            responses = await safe_gather(*tasks, return_exceptions=True)
-
+            # responses = await safe_gather(*tasks, return_exceptions=True)
+            responses = tasks
             if len(responses) == 0:
                 # how should we "Fail" here?
                 return
