@@ -19,6 +19,8 @@ HBOT_BROKER_ID = "HBOT-"
 
 ACCOUNT_ID = ""
 
+last_tracking_nonce: int = 0
+
 
 # deeply merge two dictionaries
 def merge_dicts(source: Dict, destination: Dict) -> Dict:
@@ -40,7 +42,12 @@ def join_paths(*paths: List[str]) -> str:
 
 # get timestamp in milliseconds
 def get_ms_timestamp() -> int:
-    return get_tracking_nonce()
+    global last_tracking_nonce
+    nonce = get_tracking_nonce()
+    if last_tracking_nonce + 1 == nonce:
+        nonce += 10
+    last_tracking_nonce = nonce
+    return nonce
 
 
 # convert milliseconds timestamp to seconds
