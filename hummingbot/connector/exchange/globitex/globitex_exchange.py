@@ -46,7 +46,6 @@ from hummingbot.connector.exchange.globitex import globitex_utils
 
 from hummingbot.core.data_type.common import OpenOrder
 
-from time import sleep
 
 ctce_logger = None
 s_decimal_NaN = Decimal("nan")
@@ -484,8 +483,6 @@ class GlobitexExchange(ExchangeBase):
             self.trigger_event(
                 MarketEvent.OrderFailure, MarketOrderFailureEvent(self.current_timestamp, order_id, order_type)
             )
-        # sleep to avoid next order failling
-        sleep(0.1)
 
     def start_tracking_order(
         self,
