@@ -306,40 +306,46 @@ class GlobitexExchange(ExchangeBase):
         if not params:
             params = {}
 
-        url = f"{Constants.REST_URL}/{path_url}"
-        client = await self._http_client()
-        if is_auth_required:
-            nonce = globitex_utils.get_ms_timestamp()
-            request_id = globitex_utils.RequestId.generate_request_id()
-            headers, auth_params = self._globitex_auth.generate_auth_tuple(path_url, request_id, nonce, params)
-        else:
-            headers = {"Content-Type": "application/json"}
-
-        if method == "get":
-            if len(params) > 0:
-                response = await client.get(url, params=params, headers=headers)
+        retries = 3
+        for i in range(retries):
+            url = f"{Constants.REST_URL}/{path_url}"
+            client = await self._http_client()
+            if is_auth_required:
+                nonce = globitex_utils.get_ms_timestamp()
+                request_id = globitex_utils.RequestId.generate_request_id()
+                headers, auth_params = self._globitex_auth.generate_auth_tuple(path_url, request_id, nonce, params)
             else:
-                response = await client.get(url, headers=headers)
-        elif method == "post":
-            post_json = params
-            response = await client.post(url, data=post_json, headers=headers)
-        else:
-            raise NotImplementedError
+                headers = {"Content-Type": "application/json"}
 
-        try:
-            parsed_response = json.loads(await response.text())
-        except Exception as e:
-            raise IOError(f"Error parsing data from {url}. Error: {str(e)}")
-        if response.status != 200:
-            if response.status == 403:
+            if method == "get":
+                if len(params) > 0:
+                    response = await client.get(url, params=params, headers=headers)
+                else:
+                    response = await client.get(url, headers=headers)
+            elif method == "post":
+                post_json = params
+                response = await client.post(url, data=post_json, headers=headers)
+            else:
+                raise NotImplementedError
+
+            try:
+                parsed_response = json.loads(await response.text())
+            except Exception as e:
+                raise IOError(f"Error parsing data from {url}. Error: {str(e)}")
+            if response.status != 200:
+                if response.status == 403 and "Nonce" in parsed_response["errors"][0]["message"]:
+                    if i < retries:
+                        continue
+                    raise IOError(
+                        f"Error fetching data from {url}. HTTP status is {response.status}. "
+                        f"Message: {parsed_response}"
+                        f"Nonce:{nonce}"
+                    )
                 raise IOError(
-                    f"Error fetching data from {url}. HTTP status is {response.status}. "
-                    f"Message: {parsed_response}"
-                    f"Nonce:{nonce}"
+                    f"Error fetching data from {url}. HTTP status is {response.status}. " f"Message: {parsed_response}"
                 )
-            raise IOError(
-                f"Error fetching data from {url}. HTTP status is {response.status}. " f"Message: {parsed_response}"
-            )
+            else:
+                break
         return parsed_response
 
     def get_order_price_quantum(self, trading_pair: str, price: Decimal):
