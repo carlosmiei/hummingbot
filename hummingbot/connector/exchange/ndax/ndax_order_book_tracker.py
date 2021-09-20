@@ -8,6 +8,7 @@ from collections import defaultdict, deque
 from typing import Optional, Dict, List, Deque
 
 import hummingbot.connector.exchange.ndax.ndax_constants as CONSTANTS
+from hummingbot.core.api_throttler.async_throttler import AsyncThrottler
 
 from hummingbot.core.data_type.order_book_message import OrderBookMessageType
 from hummingbot.core.data_type.order_book_tracker import OrderBookTracker
@@ -26,8 +27,13 @@ class NdaxOrderBookTracker(OrderBookTracker):
             cls._logger = logging.getLogger(__name__)
         return cls._logger
 
-    def __init__(self, trading_pairs: Optional[List[str]] = None, domain: Optional[str] = None):
-        super().__init__(NdaxAPIOrderBookDataSource(trading_pairs, domain), trading_pairs, domain)
+    def __init__(
+        self,
+        throttler: Optional[AsyncThrottler] = None,
+        trading_pairs: Optional[List[str]] = None,
+        domain: Optional[str] = None,
+    ):
+        super().__init__(NdaxAPIOrderBookDataSource(throttler, trading_pairs, domain), trading_pairs, domain)
 
         self._domain = domain
         self._ev_loop: asyncio.BaseEventLoop = asyncio.get_event_loop()
@@ -41,6 +47,8 @@ class NdaxOrderBookTracker(OrderBookTracker):
             defaultdict(lambda: deque(maxlen=1000))
         self._order_book_stream_listener_task: Optional[asyncio.Task] = None
         self._order_book_trade_listener_task: Optional[asyncio.Task] = None
+
+        self._order_books_initialized_counter: int = 0
 
     @property
     def exchange_name(self) -> str:
@@ -87,17 +95,25 @@ class NdaxOrderBookTracker(OrderBookTracker):
                         diff_messages_accepted = 0
                     last_message_timestamp = now
                 elif message.type is OrderBookMessageType.SNAPSHOT:
+
+                    s_bids, s_asks = message.bids, message.asks
+                    order_book.apply_snapshot(s_bids, s_asks, message.update_id)
+
+                    if order_book.last_diff_uid == 0:
+                        self._order_books_initialized_counter += 1
+                        self.logger().info(f"Initialized order book for {trading_pair}. "
+                                           f"{self._order_books_initialized_counter}/{len(self._trading_pairs)} completed.")
+
                     past_diffs: List[NdaxOrderBookMessage] = list(past_diffs_window)
                     # only replay diffs later than snapshot, first update active order with snapshot then replay diffs
                     replay_position = bisect.bisect_right(past_diffs, message)
                     replay_diffs = past_diffs[replay_position:]
-                    s_bids, s_asks = message.bids, message.asks
-                    order_book.apply_snapshot(s_bids, s_asks, message.update_id)
                     for diff_message in replay_diffs:
                         d_bids, d_asks = diff_message.bids, diff_message.asks
                         order_book.apply_diffs(d_bids, d_asks, diff_message.update_id)
 
                     self.logger().debug(f"Processed order book snapshot for {trading_pair}.")
+
             except asyncio.CancelledError:
                 raise
             except Exception:
